@@ -1,0 +1,2240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>浣熊大帝 · 赛博日常 — 互动影游</title>
+<style>
+/* ========== RESET & BASE ========== */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;color:#fff;user-select:none}
+:root{
+  --neon-purple:#4B3FE3;--neon-blue:#22A5F7;--neon-pink:#EC4899;--neon-teal:#27D2BF;
+  --neon-red:#FF3B5C;--neon-orange:#FF8C42;--dark:#0a0a0f;--dark2:#13131f;
+  --day-gray:#3a3a42;--fuel-low:#22A5F7;--fuel-mid:#EFAA17;--fuel-high:#FF3B5C;
+}
+#game{position:fixed;inset:0;width:100%;height:100%;overflow:hidden}
+.screen{position:absolute;inset:0;width:100%;height:100%;display:none;opacity:0;transition:opacity .6s ease}
+.screen.active{display:flex;opacity:1}
+
+/* ========== LOADING ========== */
+#loading-screen{background:var(--dark);align-items:center;justify-content:center;flex-direction:column}
+.loading-title{font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:6px;margin-bottom:30px;
+  background:linear-gradient(135deg,var(--neon-purple),var(--neon-blue),var(--neon-pink));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:pulse-glow 2s ease-in-out infinite alternate}
+.loading-bar{width:280px;height:6px;background:var(--dark2);border-radius:3px;overflow:hidden;border:1px solid rgba(75,63,227,.3)}
+.loading-fill{height:100%;width:0;background:linear-gradient(90deg,var(--neon-purple),var(--neon-blue));border-radius:3px;transition:width .3s}
+.loading-text{margin-top:16px;font-size:14px;color:#666;letter-spacing:2px}
+
+/* ========== TITLE ========== */
+#title-screen{background:var(--dark);align-items:center;justify-content:center;flex-direction:column}
+.title-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  filter:brightness(.45) saturate(1.3)}
+.title-overlay{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 0%,rgba(10,10,15,.7) 100%);pointer-events:none}
+.title-content{position:relative;z-index:2;text-align:center}
+.game-title{font-size:clamp(40px,8vw,80px);font-weight:900;letter-spacing:8px;line-height:1;
+  text-shadow:0 0 20px var(--neon-purple),0 0 40px var(--neon-purple),0 0 80px var(--neon-purple);
+  animation:title-flicker 4s ease-in-out infinite}
+.game-subtitle{font-size:clamp(16px,3vw,24px);color:var(--neon-blue);letter-spacing:12px;margin-top:12px;
+  text-shadow:0 0 10px var(--neon-blue);font-weight:300}
+.title-divider{width:200px;height:2px;margin:24px auto;
+  background:linear-gradient(90deg,transparent,var(--neon-purple),transparent)}
+.title-desc{font-size:14px;color:#888;line-height:1.8;margin-bottom:30px;max-width:400px}
+.start-btn{padding:14px 48px;font-size:18px;font-weight:700;letter-spacing:4px;color:#fff;
+  background:transparent;border:2px solid var(--neon-purple);border-radius:4px;cursor:pointer;
+  position:relative;overflow:hidden;transition:all .3s;
+  text-shadow:0 0 10px var(--neon-purple);box-shadow:0 0 20px rgba(75,63,227,.3)}
+.start-btn:hover{background:rgba(75,63,227,.2);box-shadow:0 0 40px rgba(75,63,227,.5);transform:scale(1.05)}
+.start-btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .5s}
+.start-btn:hover::before{left:100%}
+.title-hint{margin-top:20px;font-size:12px;color:#555;letter-spacing:2px}
+
+/* ========== DAY SCREEN ========== */
+#day-screen{background:var(--dark)}
+.scene-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  filter:brightness(.5) saturate(.6) contrast(1.1)}
+.scene-bg-day{opacity:0;transition:opacity 1.5s ease}
+.scene-bg-day.active{opacity:1}
+.scene-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,15,.3) 0%,rgba(10,10,15,.7) 70%,rgba(10,10,15,.9) 100%)}
+.scanlines{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0px,transparent 2px,rgba(0,0,0,.15) 3px,transparent 4px);
+  opacity:.4;animation:scanline-move 8s linear infinite}
+.lyrics-display{position:absolute;top:14%;left:50%;transform:translateX(-50%);width:70%;max-width:500px;
+  text-align:center;font-size:clamp(13px,2vw,16px);color:rgba(255,255,255,.4);letter-spacing:2px;
+  font-style:italic;min-height:24px;transition:opacity .3s}
+.dialogue-box{position:absolute;bottom:30%;left:50%;transform:translateX(-50%);width:86%;max-width:680px;
+  padding:24px 28px;background:rgba(10,10,15,.82);border:1px solid rgba(75,63,227,.25);border-radius:8px;
+  backdrop-filter:blur(6px);box-shadow:0 4px 30px rgba(0,0,0,.5)}
+.dialogue-box::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;
+  background:linear-gradient(180deg,var(--neon-purple),var(--neon-blue));border-radius:8px 0 0 8px}
+.dialogue-text{font-size:clamp(14px,2.5vw,17px);line-height:1.8;color:#ddd;letter-spacing:1px;min-height:2em}
+.dialogue-text .highlight{color:var(--neon-blue);font-weight:600}
+.qte-area{position:absolute;bottom:22%;left:50%;transform:translate(-50%,50%);display:none;
+  flex-direction:column;align-items:center;gap:12px;z-index:10}
+.qte-area.active{display:flex;animation:qte-in .3s ease}
+.qte-prompt{font-size:clamp(16px,3vw,22px);font-weight:900;color:var(--neon-red);letter-spacing:3px;
+  text-shadow:0 0 15px var(--neon-red);animation:qte-pulse .5s ease-in-out infinite alternate}
+.qte-bar{width:300px;height:30px;background:rgba(0,0,0,.6);border:2px solid var(--neon-red);
+  border-radius:15px;overflow:hidden;box-shadow:0 0 20px rgba(255,59,92,.3)}
+.qte-fill{height:100%;width:0;background:linear-gradient(90deg,var(--neon-orange),var(--neon-red));
+  border-radius:13px;transition:width .1s ease;box-shadow:0 0 15px var(--neon-red)}
+.qte-hint{font-size:14px;color:var(--neon-orange);letter-spacing:2px;animation:qte-pulse .3s ease-in-out infinite alternate}
+.choices-area{position:absolute;bottom:6%;left:50%;transform:translateX(-50%);width:86%;max-width:600px;
+  display:none;flex-direction:column;gap:10px;z-index:10}
+.choices-area.active{display:flex;animation:choice-in .4s ease}
+.choice-btn{padding:14px 20px;background:rgba(10,10,15,.82);border:1px solid rgba(75,63,227,.3);
+  border-radius:6px;color:#ccc;font-size:15px;cursor:pointer;transition:all .25s;
+  text-align:left;letter-spacing:1px;backdrop-filter:blur(4px);position:relative;overflow:hidden}
+.choice-btn:hover{border-color:var(--neon-blue);background:rgba(34,165,247,.1);color:#fff;
+  transform:translateX(6px);box-shadow:0 0 20px rgba(34,165,247,.2)}
+.choice-btn::before{content:'▸';margin-right:10px;color:var(--neon-blue)}
+.fuel-meter{position:absolute;top:20px;right:20px;display:flex;align-items:center;gap:8px;z-index:5}
+.fuel-label{font-size:12px;color:#888;letter-spacing:2px;white-space:nowrap}
+.fuel-bar{width:160px;height:16px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);
+  border-radius:8px;overflow:hidden;position:relative}
+.fuel-fill{height:100%;width:0;background:linear-gradient(90deg,var(--fuel-low),var(--fuel-mid),var(--fuel-high));
+  border-radius:7px;transition:width .3s ease;position:relative}
+.fuel-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
+  animation:fuel-shine 2s linear infinite}
+.fuel-value{font-size:14px;font-weight:700;color:#fff;min-width:30px;font-variant-numeric:tabular-nums}
+.fuel-meter.shake{animation:meter-shake .3s ease}
+
+/* ========== TRANSITION ========== */
+#transition-screen{background:#000;align-items:center;justify-content:center;flex-direction:column}
+.transition-text{font-size:clamp(20px,4vw,32px);font-weight:700;text-align:center;line-height:2;
+  letter-spacing:4px;white-space:pre-line;opacity:0}
+.transition-text.show{animation:transition-reveal 2s ease forwards}
+.glitch-overlay{position:absolute;inset:0;pointer-events:none;opacity:0}
+.glitch-overlay.active{animation:glitch-effect .6s steps(2) forwards}
+
+/* ========== NIGHT SCREEN ========== */
+#night-screen{background:var(--dark)}
+#night-bg{filter:brightness(.6) saturate(1.4) contrast(1.15)}
+.night-overlay{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 0%,rgba(10,10,15,.4) 100%)}
+.rhythm-area{position:absolute;inset:0;z-index:5}
+.hit-zone{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);width:180px;height:8px;
+  background:linear-gradient(90deg,transparent,var(--neon-purple),var(--neon-blue),var(--neon-purple),transparent);
+  border-radius:4px;box-shadow:0 0 30px var(--neon-purple),0 0 60px rgba(75,63,227,.3)}
+.hit-zone::before{content:'';position:absolute;top:-30px;left:50%;transform:translateX(-50%);
+  width:80px;height:80px;border:3px solid var(--neon-purple);border-radius:50%;
+  opacity:.3;animation:hitzone-pulse 1s ease-in-out infinite}
+.hit-zone::after{content:'';position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+  width:60px;height:60px;border:2px solid var(--neon-blue);border-radius:50%;
+  opacity:.2;animation:hitzone-pulse 1s ease-in-out infinite .3s}
+.note{position:absolute;width:50px;height:50px;left:50%;transform:translateX(-50%);
+  border-radius:50%;background:radial-gradient(circle,#fff 0%,var(--neon-blue) 40%,transparent 70%);
+  box-shadow:0 0 25px var(--neon-blue),0 0 50px rgba(34,165,247,.3);
+  pointer-events:none;will-change:top;transition:none}
+.note.strong{width:70px;height:70px;
+  background:radial-gradient(circle,#fff 0%,var(--neon-purple) 40%,transparent 70%);
+  box-shadow:0 0 35px var(--neon-purple),0 0 70px rgba(75,63,227,.4)}
+.note-lyric{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:6px;
+  white-space:nowrap;font-size:13px;color:rgba(255,255,255,.7);text-shadow:0 0 8px var(--neon-blue);
+  letter-spacing:1px}
+.note.strong .note-lyric{color:rgba(255,255,255,.9);text-shadow:0 0 12px var(--neon-purple);font-weight:600}
+.note-hit{animation:note-explode .3s ease forwards}
+.note-missed{animation:note-fade .4s ease forwards}
+.combo-display{position:absolute;top:15%;left:50%;transform:translateX(-50%);text-align:center;z-index:6}
+.combo-num{font-size:clamp(36px,7vw,60px);font-weight:900;color:#fff;
+  text-shadow:0 0 20px var(--neon-purple),0 0 40px var(--neon-purple);
+  font-variant-numeric:tabular-nums;transition:transform .1s}
+.combo-num.bounce{animation:combo-bounce .2s ease}
+.combo-label{font-size:14px;color:var(--neon-blue);letter-spacing:6px;margin-top:-4px}
+.rhythm-lyrics{position:absolute;top:8%;left:50%;transform:translateX(-50%);width:80%;max-width:500px;
+  text-align:center;font-size:clamp(14px,2.5vw,18px);color:rgba(255,255,255,.5);letter-spacing:2px;
+  font-style:italic;min-height:24px}
+.power-meter{position:absolute;top:20px;right:20px;display:flex;align-items:center;gap:8px;z-index:6}
+.power-label{font-size:12px;color:var(--neon-orange);letter-spacing:2px;white-space:nowrap}
+.power-bar{width:160px;height:16px;background:rgba(0,0,0,.5);border:1px solid rgba(255,140,66,.3);
+  border-radius:8px;overflow:hidden}
+.power-fill{height:100%;width:0;background:linear-gradient(90deg,var(--neon-purple),var(--neon-orange),var(--neon-red));
+  border-radius:7px;transition:width .3s;box-shadow:0 0 10px var(--neon-orange)}
+.power-value{font-size:14px;font-weight:700;color:#fff;min-width:30px;font-variant-numeric:tabular-nums}
+.hit-feedback{position:absolute;top:35%;left:50%;transform:translate(-50%,-50%);font-size:clamp(24px,5vw,40px);
+  font-weight:900;opacity:0;pointer-events:none;z-index:7;letter-spacing:4px}
+.hit-feedback.show{animation:feedback-pop .6s ease forwards}
+.hit-feedback.perfect{color:var(--neon-teal);text-shadow:0 0 20px var(--neon-teal)}
+.hit-feedback.good{color:var(--neon-blue);text-shadow:0 0 15px var(--neon-blue)}
+.hit-feedback.miss{color:var(--neon-red);text-shadow:0 0 15px var(--neon-red)}
+.beat-pulse{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center bottom,
+  rgba(75,63,227,.15) 0%,transparent 50%);opacity:0;transition:opacity .15s}
+.beat-pulse.active{opacity:1}
+.rhythm-hint{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);font-size:13px;
+  color:rgba(255,255,255,.4);letter-spacing:3px;z-index:6}
+
+/* ========== ENDING ========== */
+#ending-screen{background:var(--dark);align-items:center;justify-content:center;flex-direction:column}
+.ending-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  filter:brightness(.4) saturate(.8);opacity:0;transition:opacity 1s}
+.ending-bg.show{opacity:1}
+.ending-content{position:relative;z-index:2;text-align:center;max-width:600px;padding:20px}
+.ending-title{font-size:clamp(36px,7vw,60px);font-weight:900;letter-spacing:6px;margin-bottom:16px;opacity:0}
+.ending-title.show{animation:ending-reveal 1s ease .3s forwards}
+.ending-subtitle{font-size:clamp(16px,3vw,20px);color:#ccc;letter-spacing:3px;margin-bottom:24px;opacity:0;line-height:1.6}
+.ending-subtitle.show{animation:ending-reveal 1s ease .8s forwards}
+.ending-story{font-size:14px;color:#888;line-height:2;margin-bottom:24px;opacity:0;letter-spacing:1px}
+.ending-story.show{animation:ending-reveal 1s ease 1.3s forwards}
+.ending-score{display:flex;gap:20px;justify-content:center;margin-bottom:24px;opacity:0;flex-wrap:wrap}
+.ending-score.show{animation:ending-reveal 1s ease 1.8s forwards}
+.score-item{text-align:center;padding:12px 20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;min-width:100px}
+.score-label{font-size:11px;color:#666;letter-spacing:2px;margin-bottom:4px}
+.score-value{font-size:24px;font-weight:700;color:var(--neon-blue);font-variant-numeric:tabular-nums}
+.score-grade{font-size:48px;font-weight:900;color:var(--neon-purple);text-shadow:0 0 20px var(--neon-purple)}
+.ending-hidden-badge{display:inline-block;padding:4px 12px;background:rgba(39,210,191,.15);
+  border:1px solid var(--neon-teal);border-radius:4px;color:var(--neon-teal);font-size:12px;
+  letter-spacing:2px;margin-bottom:16px;opacity:0}
+.ending-hidden-badge.show{animation:ending-reveal .8s ease 2.3s forwards}
+.restart-btn{padding:12px 36px;font-size:16px;font-weight:600;color:#fff;background:transparent;
+  border:1px solid var(--neon-purple);border-radius:4px;cursor:pointer;letter-spacing:3px;
+  opacity:0;transition:all .3s;margin-top:8px}
+.restart-btn.show{animation:ending-reveal .8s ease 2.8s forwards}
+.restart-btn:hover{background:rgba(75,63,227,.2);box-shadow:0 0 20px rgba(75,63,227,.4)}
+
+/* ========== ANIMATIONS ========== */
+@keyframes pulse-glow{0%{filter:brightness(1)}100%{filter:brightness(1.3)}}
+@keyframes kenburns{0%{transform:scale(1.05) translate(0,0)}100%{transform:scale(1.12) translate(-1%,-1%)}}
+@keyframes title-flicker{0%,18%,22%,25%,53%,57%,100%{opacity:1}20%,24%,55%{opacity:.7}}
+@keyframes scanline-move{0%{background-position:0 0}100%{background-position:0 100px}}
+@keyframes qte-in{from{opacity:0;transform:translate(-50%,60%) scale(.9)}to{opacity:1;transform:translate(-50%,50%) scale(1)}}
+@keyframes qte-pulse{0%{transform:scale(1)}100%{transform:scale(1.08)}}
+@keyframes choice-in{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes fuel-shine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+@keyframes meter-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+@keyframes hitzone-pulse{0%,100%{transform:translateX(-50%) scale(1);opacity:.3}50%{transform:translateX(-50%) scale(1.2);opacity:.1}}
+@keyframes combo-bounce{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+@keyframes note-explode{0%{transform:translateX(-50%) scale(1);opacity:1}100%{transform:translateX(-50%) scale(2.5);opacity:0}}
+@keyframes note-fade{0%{opacity:1}100%{opacity:0;transform:translateX(-50%) scale(.5)}}
+@keyframes feedback-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}100%{opacity:0;transform:translate(-50%,-80%) scale(1)}}
+@keyframes transition-reveal{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes ending-reveal{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glitch-effect{0%{clip-path:inset(0 0 0 0);transform:translate(0)}20%{clip-path:inset(20% 0 30% 0);transform:translate(-5px,0)}40%{clip-path:inset(50% 0 10% 0);transform:translate(5px,0)}60%{clip-path:inset(10% 0 60% 0);transform:translate(-3px,0)}80%{clip-path:inset(70% 0 5% 0);transform:translate(3px,0)}100%{clip-path:inset(0 0 0 0);transform:translate(0)}}
+@keyframes screen-flash{0%{opacity:0}50%{opacity:.8}100%{opacity:0}}
+
+/* ========== CHARACTER PORTRAIT ========== */
+.portrait-box{position:absolute;top:15px;left:15px;width:90px;height:90px;z-index:8;pointer-events:none}
+.portrait-box.right{left:auto;right:15px}
+.portrait-img{width:100%;height:100%;border-radius:50%;border:3px solid var(--neon-purple);
+  background:rgba(10,10,15,.85);display:flex;align-items:center;justify-content:center;
+  font-size:42px;box-shadow:0 0 25px rgba(75,63,227,.4);overflow:hidden;transition:all .4s ease}
+.portrait-img.angry{border-color:var(--neon-red);box-shadow:0 0 25px rgba(255,59,92,.5)}
+.portrait-img.tired{border-color:var(--neon-teal);box-shadow:0 0 20px rgba(39,210,191,.4)}
+.portrait-img.rebel{border-color:var(--neon-pink);box-shadow:0 0 25px rgba(236,72,153,.5)}
+.portrait-img.happy{border-color:var(--neon-orange);box-shadow:0 0 20px rgba(255,140,66,.4)}
+.portrait-img.shock{border-color:var(--neon-blue);box-shadow:0 0 25px rgba(34,165,247,.5)}
+.portrait-label{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:#888;letter-spacing:2px;white-space:nowrap}
+.portrait-box.bounce-in{animation:portrait-in .4s ease}
+@keyframes portrait-in{0%{opacity:0;transform:scale(.5) translateX(-30px)}100%{opacity:1;transform:scale(1) translateX(0)}}
+
+/* ========== SCREEN FLASH ========== */
+.screen-flash{position:fixed;inset:0;pointer-events:none;z-index:50;opacity:0;background:#fff}
+.screen-flash.flash-perfect{background:radial-gradient(circle,rgba(39,210,191,.5) 0%,transparent 70%);animation:flash-fade .3s ease}
+.screen-flash.flash-good{background:radial-gradient(circle,rgba(34,165,247,.3) 0%,transparent 70%);animation:flash-fade .25s ease}
+.screen-flash.flash-miss{background:radial-gradient(circle,rgba(255,59,92,.3) 0%,transparent 70%);animation:flash-fade .2s ease}
+@keyframes flash-fade{0%{opacity:1}100%{opacity:0}}
+
+/* ========== PARTICLES ========== */
+.particle-container{position:absolute;inset:0;pointer-events:none;z-index:8;overflow:hidden}
+.particle{position:absolute;width:8px;height:8px;border-radius:50%;pointer-events:none;will-change:transform,opacity}
+.particle.spark{background:var(--neon-teal);box-shadow:0 0 8px var(--neon-teal)}
+.particle.star{background:var(--neon-purple);box-shadow:0 0 10px var(--neon-purple)}
+.particle.ember{background:var(--neon-orange);box-shadow:0 0 6px var(--neon-orange)}
+
+/* ========== ENDING COLLECTION ========== */
+.ending-collection{position:absolute;top:20px;left:20px;z-index:5;font-size:12px;color:#666;
+  letter-spacing:2px;line-height:1.8;background:rgba(10,10,15,.6);padding:10px 14px;
+  border-radius:6px;border:1px solid rgba(75,63,227,.15);backdrop-filter:blur(4px)}
+.ending-collection .ec-title{color:var(--neon-purple);font-weight:700;margin-bottom:4px}
+.ending-collection .ec-item{display:flex;align-items:center;gap:6px}
+.ending-collection .ec-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.1);transition:all .3s}
+.ending-collection .ec-dot.unlocked{background:var(--neon-teal);box-shadow:0 0 8px var(--neon-teal)}
+.ending-collection .ec-dot.locked{background:rgba(255,255,255,.08)}
+
+/* ========== ENHANCED COMBO ========== */
+.combo-display.fever{animation:fever-shake .15s ease infinite alternate}
+@keyframes fever-shake{0%{transform:translateX(-50%) translate(0,0)}100%{transform:translateX(-50%) translate(2px,-1px)}}
+.combo-num.fever{color:var(--neon-orange)!important;text-shadow:0 0 20px var(--neon-orange),0 0 40px var(--neon-orange),0 0 60px var(--neon-red)!important}
+.combo-label.fever{color:var(--neon-orange)!important}
+
+/* ========== SCREEN SHAKE ========== */
+.shake-screen{animation:screen-shake .2s ease}
+@keyframes screen-shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-4px,2px)}50%{transform:translate(4px,-2px)}75%{transform:translate(-2px,4px)}}
+
+/* ========== DAY SCENE GLITCH ========== */
+.day-glitch-flash{position:absolute;inset:0;pointer-events:none;z-index:20;opacity:0;
+  background:linear-gradient(90deg,transparent,rgba(75,63,227,.2),transparent)}
+.day-glitch-flash.active{animation:day-glitch .5s ease}
+@keyframes day-glitch{0%{opacity:0}10%{opacity:1;transform:translateX(-10px)}20%{opacity:.5;transform:translateX(10px)}30%{opacity:1;transform:translateX(-5px)}100%{opacity:0;transform:translateX(0)}}
+
+/* ========== CHOICE BUTTON ENHANCEMENT ========== */
+.choice-btn .choice-tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;
+  margin-left:8px;letter-spacing:1px;opacity:.8}
+.choice-btn .choice-tag.rebel{background:rgba(236,72,153,.2);color:var(--neon-pink)}
+.choice-btn .choice-tag.ally{background:rgba(39,210,191,.2);color:var(--neon-teal)}
+
+/* ========== SEEK BAR ========== */
+.seek-bar{position:fixed;bottom:0;left:0;width:100%;height:28px;z-index:30;
+  display:none;align-items:center;padding:0 16px;cursor:pointer;
+  background:linear-gradient(180deg,transparent 0%,rgba(10,10,15,.5) 60%,rgba(10,10,15,.8) 100%)}
+.seek-bar.active{display:flex}
+.seek-track{position:relative;width:100%;height:5px;background:rgba(255,255,255,.12);
+  border-radius:3px;overflow:visible}
+.seek-fill{height:100%;width:0;background:linear-gradient(90deg,var(--neon-purple),var(--neon-blue));
+  border-radius:3px;transition:width .1s linear;box-shadow:0 0 8px rgba(34,165,247,.4)}
+.seek-handle{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);
+  width:14px;height:14px;border-radius:50%;background:#fff;
+  box-shadow:0 0 10px var(--neon-blue),0 0 20px rgba(34,165,247,.5);
+  transition:transform .15s ease;pointer-events:none}
+.seek-bar:hover .seek-handle{transform:translate(-50%,-50%) scale(1.3)}
+.seek-time{position:absolute;top:-22px;left:50%;transform:translateX(-50%);
+  font-size:10px;color:rgba(255,255,255,.6);letter-spacing:1px;white-space:nowrap;
+  pointer-events:none;opacity:0;transition:opacity .2s}
+.seek-bar:hover .seek-time{opacity:1}
+
+/* ========== CHECK-IN MODAL ========== */
+.checkin-overlay{position:fixed;inset:0;z-index:100;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(6px)}
+.checkin-overlay.active{display:flex;animation:checkin-fade-in .3s ease}
+@keyframes checkin-fade-in{from{opacity:0}to{opacity:1}}
+.checkin-box{position:relative;width:90%;max-width:420px;
+  background:linear-gradient(145deg,var(--dark2),var(--dark));
+  border:1px solid rgba(75,63,227,.3);border-radius:12px;
+  padding:28px 24px 20px;box-shadow:0 0 40px rgba(75,63,227,.2);
+  animation:checkin-slide-up .4s cubic-bezier(.2,.8,.4,1)}
+@keyframes checkin-slide-up{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.checkin-close{position:absolute;top:12px;right:14px;width:28px;height:28px;
+  border:none;background:transparent;color:#666;font-size:18px;cursor:pointer;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.checkin-close:hover{background:rgba(255,255,255,.1);color:#fff}
+.checkin-title{text-align:center;font-size:22px;font-weight:900;letter-spacing:4px;
+  background:linear-gradient(135deg,var(--neon-purple),var(--neon-blue));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:4px}
+.checkin-subtitle{text-align:center;font-size:12px;color:#888;letter-spacing:2px;margin-bottom:20px}
+.checkin-stats{display:flex;justify-content:center;gap:24px;margin-bottom:20px}
+.checkin-stat{text-align:center}
+.checkin-stat-num{font-size:28px;font-weight:900;color:var(--neon-blue);
+  text-shadow:0 0 12px rgba(34,165,247,.4);font-variant-numeric:tabular-nums}
+.checkin-stat-label{font-size:11px;color:#666;letter-spacing:2px;margin-top:2px}
+.checkin-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:20px}
+.checkin-day{position:relative;aspect-ratio:1;border-radius:8px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  transition:all .25s;cursor:default}
+.checkin-day-label{font-size:10px;color:#555;letter-spacing:1px}
+.checkin-day-icon{font-size:18px;margin-top:2px}
+.checkin-day.checked{background:rgba(39,210,191,.12);border-color:rgba(39,210,191,.3)}
+.checkin-day.checked .checkin-day-label{color:var(--neon-teal)}
+.checkin-day.today{border-color:var(--neon-blue);box-shadow:0 0 12px rgba(34,165,247,.3)}
+.checkin-day.today .checkin-day-label{color:var(--neon-blue)}
+.checkin-day.can-check{cursor:pointer;animation:checkin-pulse 1.5s ease-in-out infinite}
+.checkin-day.can-check:hover{background:rgba(34,165,247,.15);transform:scale(1.08)}
+@keyframes checkin-pulse{0%,100%{box-shadow:0 0 12px rgba(34,165,247,.3)}50%{box-shadow:0 0 20px rgba(34,165,247,.5)}}
+.checkin-day.checked-today{background:rgba(39,210,191,.2);border-color:var(--neon-teal);
+  animation:checkin-pop .5s ease}
+@keyframes checkin-pop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+.checkin-btn{width:100%;padding:12px;font-size:15px;font-weight:700;letter-spacing:3px;
+  color:#fff;background:linear-gradient(135deg,var(--neon-purple),var(--neon-blue));
+  border:none;border-radius:8px;cursor:pointer;transition:all .25s;
+  box-shadow:0 0 20px rgba(75,63,227,.3)}
+.checkin-btn:hover{transform:translateY(-2px);box-shadow:0 4px 30px rgba(75,63,227,.5)}
+.checkin-btn:disabled{opacity:.4;cursor:default;transform:none;box-shadow:none}
+.checkin-reward{text-align:center;font-size:13px;color:var(--neon-orange);letter-spacing:1px;
+  min-height:20px;margin-bottom:14px;transition:opacity .3s}
+.checkin-streak-badge{position:absolute;top:-8px;right:-8px;width:22px;height:22px;
+  background:var(--neon-orange);border-radius:50%;font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  box-shadow:0 0 10px rgba(255,140,66,.5)}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:768px){
+  .fuel-bar,.power-bar{width:100px}
+  .qte-bar{width:220px}
+  .hit-zone{width:140px}
+  .note{width:40px;height:40px}
+  .note.strong{width:56px;height:56px}
+  .ending-score{gap:10px}
+  .score-item{min-width:80px;padding:8px 12px}
+  .portrait-box{width:65px;height:65px;top:10px;left:10px}
+  .portrait-img{font-size:30px;border-width:2px}
+  .portrait-label{font-size:9px;bottom:-14px}
+  .lyrics-display{top:10%;width:65%;font-size:12px}
+  .dialogue-box{bottom:28%;padding:16px 20px}
+  .choices-area{bottom:4%;width:92%}
+  .choice-btn{padding:12px 16px;font-size:14px}
+}
+
+/* ========== PERFECT CLEAR REWARD ========== */
+.perfect-clear-layer{position:absolute;inset:0;z-index:6;pointer-events:none;opacity:0;transition:opacity 1.5s ease}
+.perfect-clear-layer.active{opacity:1}
+/* Golden particle rain */
+.gold-particle{position:absolute;width:4px;height:4px;border-radius:50%;
+  background:linear-gradient(135deg,#FFD700,#FFA500);
+  box-shadow:0 0 6px #FFD700,0 0 12px rgba(255,215,0,.5);
+  pointer-events:none;will-change:transform,opacity}
+@keyframes gold-fall{
+  0%{transform:translateY(-20px) translateX(0) rotate(0deg);opacity:0}
+  10%{opacity:1}
+  90%{opacity:1}
+  100%{transform:translateY(100vh) translateX(var(--drift,0px)) rotate(360deg);opacity:0}
+}
+/* Golden glow on title */
+.game-title.perfect{animation:title-flicker 4s ease-in-out infinite,perfect-glow 3s ease-in-out infinite alternate}
+@keyframes perfect-glow{
+  0%{text-shadow:0 0 20px var(--neon-purple),0 0 40px var(--neon-purple),0 0 80px var(--neon-purple),0 0 0 #FFD700}
+  100%{text-shadow:0 0 20px #FFD700,0 0 40px #FFD700,0 0 80px #FFA500,0 0 120px rgba(255,215,0,.4)}
+}
+.game-subtitle.perfect{color:#FFD700!important;text-shadow:0 0 10px #FFD700,0 0 20px rgba(255,215,0,.5)!important}
+.title-divider.perfect{background:linear-gradient(90deg,transparent,#FFD700,transparent)!important;
+  box-shadow:0 0 10px rgba(255,215,0,.5)}
+/* Perfect clear badge */
+.perfect-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);
+  z-index:7;text-align:center;pointer-events:none;opacity:0}
+.perfect-badge.show{animation:perfect-badge-in 1.2s cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes perfect-badge-in{
+  0%{transform:translate(-50%,-50%) scale(0) rotate(-180deg);opacity:0}
+  60%{transform:translate(-50%,-50%) scale(1.2) rotate(10deg);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(1) rotate(0deg);opacity:1}
+}
+.perfect-badge-icon{font-size:60px;filter:drop-shadow(0 0 20px #FFD700) drop-shadow(0 0 40px #FFA500);
+  animation:perfect-pulse 2s ease-in-out infinite alternate}
+@keyframes perfect-pulse{0%{filter:drop-shadow(0 0 20px #FFD700) drop-shadow(0 0 40px #FFA500)}100%{filter:drop-shadow(0 0 30px #FFD700) drop-shadow(0 0 60px #FFD700)}}
+.perfect-badge-text{font-size:clamp(20px,4vw,32px);font-weight:900;letter-spacing:8px;margin-top:12px;
+  color:#FFD700;text-shadow:0 0 15px #FFD700,0 0 30px #FFA500}
+.perfect-badge-sub{font-size:12px;color:rgba(255,215,0,.6);letter-spacing:4px;margin-top:8px}
+/* Easter egg story modal */
+.easter-egg-modal{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .8s ease}
+.easter-egg-modal.active{opacity:1;pointer-events:auto}
+.easter-egg-box{max-width:440px;width:88%;padding:36px 28px;text-align:center;position:relative}
+.easter-egg-avatar{font-size:48px;margin-bottom:16px;filter:drop-shadow(0 0 15px #FFD700);
+  animation:perfect-pulse 2s ease-in-out infinite alternate}
+.easter-egg-title{font-size:18px;font-weight:700;color:#FFD700;letter-spacing:4px;margin-bottom:16px;
+  text-shadow:0 0 10px rgba(255,215,0,.5)}
+.easter-egg-text{font-size:14px;color:#ccc;line-height:2;letter-spacing:1px;min-height:80px}
+.easter-egg-text .highlight{color:#FFD700;font-weight:600}
+.easter-egg-typing::after{content:'▊';color:#FFD700;animation:cursor-blink .6s ease infinite}
+@keyframes cursor-blink{0%,100%{opacity:1}50%{opacity:0}}
+.easter-egg-close{margin-top:24px;padding:8px 28px;font-size:13px;color:#FFD700;letter-spacing:3px;
+  background:transparent;border:1px solid rgba(255,215,0,.4);border-radius:4px;cursor:pointer;
+  transition:all .3s;display:none}
+.easter-egg-close:hover{background:rgba(255,215,0,.1);box-shadow:0 0 15px rgba(255,215,0,.3)}
+/* Golden border on ending collection when perfect */
+.ending-collection.perfect{border-color:rgba(255,215,0,.4)!important;
+  box-shadow:0 0 15px rgba(255,215,0,.2)}
+.ending-collection.perfect .ec-title{color:#FFD700!important}
+.ending-collection.perfect .ec-dot.unlocked{background:#FFD700!important;box-shadow:0 0 8px #FFD700!important}
+@media(max-width:600px){
+  .perfect-badge-icon{font-size:44px}
+  .perfect-badge-text{font-size:20px;letter-spacing:4px}
+  .easter-egg-box{padding:28px 20px}
+  .easter-egg-text{font-size:13px;line-height:1.8}
+}
+</style>
+</head>
+<body>
+<div id="game">
+  <div class="screen-flash" id="screen-flash"></div>
+  <!-- SEEK BAR -->
+  <div class="seek-bar" id="seek-bar">
+    <div class="seek-track" id="seek-track">
+      <div class="seek-fill" id="seek-fill"></div>
+      <div class="seek-handle" id="seek-handle"></div>
+      <div class="seek-time" id="seek-time">0:00 / 0:00</div>
+    </div>
+  </div>
+  <!-- CHECK-IN MODAL -->
+  <div class="checkin-overlay" id="checkin-overlay">
+    <div class="checkin-box">
+      <button class="checkin-close" id="checkin-close">&times;</button>
+      <h3 class="checkin-title">每日签到</h3>
+      <p class="checkin-subtitle">浣熊打卡 · 不迟到不早退</p>
+      <div class="checkin-stats">
+        <div class="checkin-stat">
+          <div class="checkin-stat-num" id="checkin-streak">0</div>
+          <div class="checkin-stat-label">连续签到</div>
+        </div>
+        <div class="checkin-stat">
+          <div class="checkin-stat-num" id="checkin-total">0</div>
+          <div class="checkin-stat-label">累计签到</div>
+        </div>
+      </div>
+      <div class="checkin-grid" id="checkin-grid"></div>
+      <p class="checkin-reward" id="checkin-reward"></p>
+      <button class="checkin-btn" id="checkin-btn">签 到</button>
+    </div>
+  </div>
+  <!-- LOADING -->
+  <div id="loading-screen" class="screen active">
+    <div class="loading-title">浣熊大帝</div>
+    <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+    <div class="loading-text" id="loading-text">正在加载音频资源...</div>
+  </div>
+
+  <!-- TITLE -->
+  <div id="title-screen" class="screen">
+    <video class="title-bg" autoplay muted loop playsinline preload="auto" poster="assets/bg_title.jpg"><source src="assets/bg_title.mp4" type="video/mp4"></video>
+    <div class="title-overlay"></div>
+    <div class="ending-collection" id="ending-collection">
+      <div class="ec-title">结局收集</div>
+      <div class="ec-item"><span class="ec-dot locked" id="ec-A"></span><span>完美燃尽</span></div>
+      <div class="ec-item"><span class="ec-dot locked" id="ec-B"></span><span>翻车社死</span></div>
+      <div class="ec-item"><span class="ec-dot locked" id="ec-C"></span><span>社畜同盟</span></div>
+    </div>
+    <!-- Perfect clear golden particle layer -->
+    <div class="perfect-clear-layer" id="perfect-clear-layer"></div>
+    <!-- Perfect clear badge -->
+    <div class="perfect-badge" id="perfect-badge">
+      <div class="perfect-badge-icon">👑</div>
+      <div class="perfect-badge-text">完美通关</div>
+      <div class="perfect-badge-sub">三大结局 全部解锁</div>
+    </div>
+    <!-- Easter egg story modal -->
+    <div class="easter-egg-modal" id="easter-egg-modal">
+      <div class="easter-egg-box">
+        <div class="easter-egg-avatar">🦝</div>
+        <div class="easter-egg-title">隐藏彩蛋 · 浣熊大帝的秘密</div>
+        <div class="easter-egg-text" id="easter-egg-text"></div>
+        <button class="easter-egg-close" id="easter-egg-close">收下这份荣耀</button>
+      </div>
+    </div>
+    <button id="checkin-open-btn" style="position:absolute;top:20px;right:20px;z-index:5;padding:8px 14px;background:rgba(10,10,15,.7);border:1px solid rgba(75,63,227,.3);border-radius:6px;color:var(--neon-blue);font-size:12px;letter-spacing:2px;cursor:pointer;backdrop-filter:blur(4px);transition:all .25s">📅 签到</button>
+    <div class="title-content">
+      <h1 class="game-title">浣熊大帝</h1>
+      <p class="game-subtitle">赛博日常</p>
+      <div class="title-divider"></div>
+      <p class="title-desc">白天被早七支配，被老板画饼，疯狂肝分镜<br>夜晚重拳出击，滑板炸街<br><br>你的每一个选择，都决定了他今夜能燃多烈</p>
+      <button class="start-btn" id="start-btn">开始游戏</button>
+      <p class="title-hint">🎧 建议佩戴耳机 · 键盘空格/点击屏幕 互动</p>
+    </div>
+  </div>
+
+  <!-- DAY -->
+  <div id="day-screen" class="screen">
+    <video class="scene-bg scene-bg-day active" id="day-bg-1" autoplay muted loop playsinline preload="auto"><source src="assets/bg_metro.mp4" type="video/mp4"></video>
+    <video class="scene-bg scene-bg-day" id="day-bg-2" autoplay muted loop playsinline preload="auto"><source src="assets/bg_office.mp4" type="video/mp4"></video>
+    <video class="scene-bg scene-bg-day" id="day-bg-3" autoplay muted loop playsinline preload="auto"><source src="assets/bg_lunch.mp4" type="video/mp4"></video>
+    <video class="scene-bg scene-bg-day" id="day-bg-4" autoplay muted loop playsinline preload="auto"><source src="assets/bg_overtime.mp4" type="video/mp4"></video>
+    <div class="scene-overlay"></div>
+    <div class="scanlines"></div>
+    <div class="day-glitch-flash" id="day-glitch-flash"></div>
+    <div class="portrait-box" id="portrait-box" style="display:none">
+      <div class="portrait-img" id="portrait-img">🦝</div>
+      <div class="portrait-label" id="portrait-label">浣熊</div>
+    </div>
+    <div class="lyrics-display" id="lyrics"></div>
+    <div class="dialogue-box"><p class="dialogue-text" id="dialogue-text"></p></div>
+    <div class="qte-area" id="qte-area">
+      <p class="qte-prompt" id="qte-prompt"></p>
+      <div class="qte-bar"><div class="qte-fill" id="qte-fill"></div></div>
+      <p class="qte-hint">疯狂点击屏幕！</p>
+    </div>
+    <div class="choices-area" id="choices-area"></div>
+    <div class="fuel-meter" id="fuel-meter">
+      <span class="fuel-label">⚡怨气</span>
+      <div class="fuel-bar"><div class="fuel-fill" id="fuel-fill"></div></div>
+      <span class="fuel-value" id="fuel-value">0</span>
+    </div>
+  </div>
+
+  <!-- TRANSITION -->
+  <div id="transition-screen" class="screen">
+    <div class="glitch-overlay" id="glitch-overlay"></div>
+    <div class="transition-text" id="transition-text"></div>
+  </div>
+
+  <!-- NIGHT -->
+  <div id="night-screen" class="screen">
+    <video class="scene-bg" id="night-bg" autoplay muted loop playsinline preload="auto" poster="assets/bg_night.jpg"><source src="assets/bg_night.mp4" type="video/mp4"></video>
+    <div class="night-overlay"></div>
+    <div class="particle-container" id="particle-container"></div>
+    <div class="beat-pulse" id="beat-pulse"></div>
+    <div class="rhythm-area" id="rhythm-area">
+      <div class="hit-zone" id="hit-zone"></div>
+    </div>
+    <div class="rhythm-lyrics" id="rhythm-lyrics"></div>
+    <div class="combo-display" id="combo-display">
+      <div class="combo-num" id="combo-num">0</div>
+      <div class="combo-label">COMBO</div>
+    </div>
+    <div class="hit-feedback" id="hit-feedback"></div>
+    <div class="power-meter">
+      <span class="power-label">🔥POWER</span>
+      <div class="power-bar"><div class="power-fill" id="power-fill"></div></div>
+      <span class="power-value" id="power-value">0</span>
+    </div>
+    <div class="rhythm-hint">空格/点击 — 踩准节拍！</div>
+  </div>
+
+  <!-- ENDING -->
+  <div id="ending-screen" class="screen">
+    <video class="ending-bg" id="ending-bg" autoplay muted loop playsinline preload="auto"><source src="assets/bg_night.mp4" type="video/mp4"></video>
+    <div class="ending-content" id="ending-content">
+      <div class="ending-hidden-badge" id="ending-badge">🔑 隐藏结局已解锁</div>
+      <h2 class="ending-title" id="ending-title"></h2>
+      <p class="ending-subtitle" id="ending-subtitle"></p>
+      <p class="ending-story" id="ending-story"></p>
+      <div class="ending-score" id="ending-score"></div>
+      <button class="restart-btn" id="restart-btn">再来一次</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== GAME DATA =====================
+const LYRICS=[
+  {t:0.15,text:"（前奏：失真电吉他 Riff · 808 重底鼓 · 赛博故障 Glitch）"},
+  {t:11.10,text:"又是浣熊忙碌的一天"},
+  {t:13.66,text:"工牌压着胸口 咖啡兑着疲倦"},
+  {t:16.18,text:"浣熊的梦 被早七的闹钟撕裂"},
+  {t:18.74,text:"地铁厢挤着 同款麻木的脸"},
+  {t:21.46,text:"这一天 忙得像陀螺转圈"},
+  {t:23.82,text:"又像原地打转 没个终点"},
+  {t:26.38,text:"梦里我是战神 关二爷挥剑"},
+  {t:28.62,text:"醒来抽卡跑图 剪视频到深夜"},
+  {t:31.66,text:"没光环 没标签 普通得太明显"},
+  {t:36.62,text:"只想活得 不那么 兵荒马乱"},
+  {t:42.70,text:"（间奏：重金属吉他嘶吼 · 合成器贝斯暴走）"},
+  {t:52.10,text:"闹钟响第七遍 才肯揉开睡眼"},
+  {t:54.50,text:"挣扎爬起来 镜子里一脸狼狈"},
+  {t:56.74,text:"套上皱巴巴的衬衫 叼片面包就赶场"},
+  {t:59.58,text:"地铁闸机吞卡 差点迟到"},
+  {t:62.58,text:"慌慌张张刚坐到工位 老板吼声穿透走廊"},
+  {t:65.34,text:"让你改的方案 怎么还在文档里躺？"},
+  {t:67.90,text:"会议室秒变战场 唾沫星子乱飞乱撞"},
+  {t:70.58,text:"我缩在角落 只想当个透明的墙"},
+  {t:72.98,text:"有人低头摸鱼 假装敲着键盘响"},
+  {t:75.26,text:"老板拍着桌子 画着大饼多香"},
+  {t:77.78,text:"年轻人要珍惜 把公司当成你家"},
+  {t:80.34,text:"转头开着迈巴赫 油门踩得贼亮堂"},
+  {t:82.90,text:"躺平？别想！业绩还得往上扛！"},
+  {t:85.62,text:"我扯着嘴角 挤出敷衍的模样"},
+  {t:89.62,text:"不吃饭不开会 简直是职场铁律"},
+  {t:93.42,text:"外卖软件刷半天 选个套餐不容易"},
+  {t:95.66,text:"送餐员在街头 骑着车颠来颠去"},
+  {t:98.24,text:"我的餐盒 注定难逃被挤压的命运"},
+  {t:100.78,text:"打开一看 菜汤洒得到处都是"},
+  {t:103.30,text:"叹气扒拉两口 接着对着屏幕肝分镜"},
+  {t:105.86,text:"眼睛酸涩得 快要睁不开的境地"},
+  {t:108.42,text:"午休趴桌上 脑袋一歪就入戏"},
+  {t:110.98,text:"梦里的我 不再是谁的打工机器"},
+  {t:113.54,text:"三杯美式灌下肚 困意还是往上袭"},
+  {t:116.10,text:"眼皮打架 灵魂快要抽离身体"},
+  {t:125.70,text:"（间奏：DJ长搓碟 · 新金属吉他爆发）"},
+  {t:136.50,text:"抽完卡跑完图 窗外已经黑透天际"},
+  {t:139.06,text:"屏幕的光 映着我熬红的眼底"},
+  {t:141.42,text:"梦里的剧本 终于轮到我当主角戏"},
+  {t:144.18,text:"甲方爸爸 哭爹喊娘 求我高抬贵手"},
+  {t:146.60,text:"方案改到满意 钞票赚得哗啦啦滴"},
+  {t:149.30,text:"突然一道惊雷 劈碎所有的如意"},
+  {t:151.82,text:"睁眼一看 老板发消息 加班到凌晨"},
+  {t:154.38,text:"认命叹口气 继续对着分镜较劲"},
+  {t:156.94,text:"键盘敲得噼里啪啦 手指快要没力气"},
+  {t:159.50,text:"咖啡续了一杯又一杯 苦得像人生的题"},
+  {t:162.22,text:"窗外的月亮 都躲进云里睡大觉"},
+  {t:164.46,text:"我还在工位 守着无尽的琐碎和难题"},
+  {t:168.10,text:"（高潮升调：失真吉他大Solo · 合唱和声叠加）"},
+  {t:171.94,text:"又是浣熊忙碌的一天"},
+  {t:174.50,text:"工牌压着胸口 咖啡兑着疲倦"},
+  {t:177.02,text:"浣熊的梦 被早七的闹钟撕裂"},
+  {t:179.62,text:"地铁厢挤着 同款麻木的脸"},
+  {t:182.30,text:"这一天 忙得像陀螺转圈"},
+  {t:184.70,text:"又像原地打转 没个终点"},
+  {t:187.26,text:"梦里我是战神 关二爷挥剑"},
+  {t:189.50,text:"醒来抽卡跑图 剪视频到深夜"},
+  {t:192.54,text:"没光环 没标签 普通得太明显"},
+  {t:197.46,text:"只想活得 不那么 兵荒马乱"},
+  {t:207.62,text:"（尾奏：乐器渐弱 · 机械低吟 · 故障音效消散）"},
+  {t:213.42,text:"闹钟又响 刺破凌晨的寂静"},
+  {t:215.66,text:"浣熊睁开眼 盯着天花板发愣"},
+  {t:218.54,text:"镜子里那张脸 写满了倦意"},
+  {t:220.78,text:"叹口气起身 又是忙碌的一天"},
+];
+
+const TIMELINE=[
+  // --- Scene 1: Commute [11-36s] ---
+  {t:11,a:'narration',text:'又是浣熊忙碌的一天。工牌压着胸口，咖啡兑着疲倦。'},
+  {t:16.5,a:'qte',prompt:'⚠ 老板走过来！快速点击假装打字！',dur:5,target:8,fuelOK:15,fuelFail:20},
+  {t:22,a:'narration',text:'地铁厢挤着同款麻木的脸。这一天忙得像陀螺转圈。'},
+  {t:26.5,a:'narration',text:'梦里我是战神，关二爷挥剑。醒来抽卡跑图，剪视频到深夜。'},
+  {t:31.5,a:'narration',text:'没光环，没标签，普通得太明显。只想活得...不那么兵荒马乱。'},
+  // --- Interlude [36-52s] ---
+  {t:42,a:'narration',text:'（重金属吉他嘶吼，合成器贝斯暴走...）'},
+  // --- Scene 2: Boss [52-87s] ---
+  {t:52,a:'narration',text:'闹钟响第七遍，才肯揉开睡眼。套上皱巴巴的衬衫，叼片面包就赶场。'},
+  {t:62.5,a:'narration',text:'慌慌张张刚坐到工位——老板吼声穿透走廊！'},
+  {t:65.5,a:'choice',text:'老板拍着桌子："年轻人要珍惜，把公司当成你家！"',opts:[
+    {txt:'低头认命，继续肝',fuel:15},
+    {txt:'心里暗骂，偷偷翻白眼',fuel:20,flag:'rebellious'},
+    {txt:'帮旁边的同事挡了一下枪',fuel:10,flag:'ally'}
+  ]},
+  {t:73,a:'narration',text:'有人低头摸鱼，假装敲着键盘响。老板转头开着迈巴赫，油门踩得贼亮堂。'},
+  {t:78,a:'choice',text:'老板说"躺平？别想！业绩还得往上扛！"',opts:[
+    {txt:'假笑附和："好的老板"',fuel:15},
+    {txt:'表面点头，心里已经炸了',fuel:20}
+  ]},
+  {t:85,a:'narration',text:'我扯着嘴角，挤出敷衍的模样。'},
+  // --- Scene 3: Lunch [88-124s] ---
+  {t:89.5,a:'narration',text:'不吃饭不开会，简直是职场铁律。外卖软件刷半天，选个套餐不容易。'},
+  {t:98.5,a:'choice',text:'打开外卖一看——菜汤洒得到处都是！',opts:[
+    {txt:'叹气扒拉两口，接着肝分镜',fuel:15},
+    {txt:'怒摔外卖！跑楼下滑板一圈！',fuel:25,flag:'sneaked_out'}
+  ]},
+  {t:106,a:'narration',text:'午休趴桌上，脑袋一歪就入戏。梦里的我，不再是谁的打工机器。'},
+  {t:111,a:'narration',text:'三杯美式灌下肚，困意还是往上袭。眼皮打架，灵魂快要抽离身体。'},
+  // --- Scene 4: Overtime [125-168s] ---
+  {t:125.5,a:'narration',text:'（DJ长搓碟，新金属吉他爆发...）'},
+  {t:136.5,a:'narration',text:'抽完卡跑完图，窗外已经黑透天际。屏幕的光，映着我熬红的眼底。'},
+  {t:144,a:'narration',text:'甲方爸爸哭爹喊娘求我高抬贵手。突然——一道惊雷劈碎所有如意！'},
+  {t:151.5,a:'narration',text:'老板发消息：加班到凌晨。认命叹口气，继续对着分镜较劲。'},
+  {t:157,a:'qte',prompt:'⚡ 灵感突然来了！快速敲击捕捉分镜灵感！',dur:5,target:10,fuelOK:20,fuelFail:25},
+  {t:162.5,a:'narration',text:'咖啡续了一杯又一杯，苦得像人生的题。窗外的月亮都躲进云里睡大觉。'},
+  // --- Transition ---
+  {t:167,a:'transition',text:'够了。\n受够了。\n拿起滑板。\n今夜，街头属于我。'},
+];
+
+const BEATS=[
+  {t:168.8,strong:true,lyric:'🎸 Solo炸裂！'},
+  {t:170.5,strong:false},
+  {t:171.94,strong:true,lyric:'又是浣熊忙碌的一天'},
+  {t:173.5,strong:false},
+  {t:174.50,strong:false},
+  {t:176.0,strong:true,lyric:'工牌压着胸口'},
+  {t:177.8,strong:false},
+  {t:179.62,strong:true,lyric:'浣熊的梦被撕裂'},
+  {t:181.3,strong:false},
+  {t:182.30,strong:false},
+  {t:184.0,strong:true,lyric:'陀螺转圈'},
+  {t:185.5,strong:false},
+  {t:187.26,strong:true,lyric:'梦里我是战神'},
+  {t:189.0,strong:false},
+  {t:189.50,strong:false},
+  {t:191.2,strong:true,lyric:'抽卡跑图'},
+  {t:192.54,strong:false},
+  {t:194.5,strong:false},
+  {t:196.0,strong:false},
+  {t:197.46,strong:true,lyric:'没光环没标签'},
+  {t:199.5,strong:false},
+  {t:201.5,strong:false},
+  {t:203.5,strong:true,lyric:'不那么兵荒马乱！'},
+];
+
+// ===================== STATE =====================
+const S={
+  screen:'loading',fuel:0,flags:[],combo:0,maxCombo:0,
+  stats:{perfect:0,good:0,miss:0},totalBeats:BEATS.length,hitBeats:0,
+  rhythmActive:false,qteActive:false,qteClicks:0,qteTarget:0,qteStart:0,qteDur:0,
+  qteFuelOK:0,qteFuelFail:0,choiceActive:false,
+  notes:[],nextBeat:0,triggered:new Set(),typewriterTimer:null,
+  endingDetermined:false,power:0,currentDayScene:0,
+};
+
+// ===================== SOUND EFFECTS (Web Audio API) =====================
+const SFX={
+  ctx:null,
+  init(){
+    if(this.ctx)return;
+    try{this.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){console.warn('AudioContext init failed:',e);}
+  },
+  safe(fn){
+    try{if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();fn.call(this);}catch(e){}
+  },
+  tone(freq,dur,type='sine',vol=0.15,delay=0){
+    if(!this.ctx)return;
+    try{
+    const o=this.ctx.createOscillator();
+    const g=this.ctx.createGain();
+    o.type=type;
+    o.frequency.value=freq;
+    g.gain.value=0;
+    o.connect(g);g.connect(this.ctx.destination);
+    const t=this.ctx.currentTime+delay;
+    g.gain.linearRampToValueAtTime(vol,t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.start(t);o.stop(t+dur);
+    }catch(e){}
+  },
+  sweep(f1,f2,dur,type='sawtooth',vol=0.1){
+    if(!this.ctx)return;
+    try{
+    const o=this.ctx.createOscillator();
+    const g=this.ctx.createGain();
+    o.type=type;
+    o.frequency.setValueAtTime(f1,this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(f2,this.ctx.currentTime+dur);
+    g.gain.value=0;
+    o.connect(g);g.connect(this.ctx.destination);
+    g.gain.linearRampToValueAtTime(vol,this.ctx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+dur);
+    o.start();o.stop(this.ctx.currentTime+dur);
+    }catch(e){}
+  },
+  noise(dur,vol=0.08){
+    if(!this.ctx)return;
+    try{
+    const buf=this.ctx.createBuffer(1,this.ctx.sampleRate*dur,this.ctx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    const src=this.ctx.createBufferSource();
+    const g=this.ctx.createGain();
+    const f=this.ctx.createBiquadFilter();
+    f.type='bandpass';f.frequency.value=1000;
+    src.buffer=buf;src.connect(f);f.connect(g);g.connect(this.ctx.destination);
+    g.gain.value=vol;
+    g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+dur);
+    src.start();src.stop(this.ctx.currentTime+dur);
+    }catch(e){}
+  },
+  chord(freqs,dur,type='sine',vol=0.08){
+    freqs.forEach(f=>this.tone(f,dur,type,vol));
+  },
+  // Specific game sounds
+  qteSuccess(){this.sweep(400,1200,0.2,'square',0.12);this.tone(800,0.15,'sine',0.1,0.05);},
+  qteFail(){this.sweep(300,80,0.4,'sawtooth',0.12);this.noise(0.15,0.06);},
+  choiceSelect(){this.tone(600,0.08,'triangle',0.1);this.tone(900,0.06,'sine',0.08,0.03);},
+  perfect(){this.chord([523,659,784],0.3,'sine',0.1);this.tone(1047,0.15,'sine',0.08,0.05);},
+  good(){this.tone(587,0.15,'triangle',0.1);this.tone(880,0.1,'sine',0.06,0.03);},
+  miss(){this.tone(150,0.2,'sawtooth',0.1);this.noise(0.1,0.04);},
+  combo10(){this.chord([523,659,784,1047],0.4,'square',0.06);},
+  combo20(){this.chord([523,659,784,1047,1319],0.5,'square',0.07);this.sweep(400,1600,0.3,'sine',0.05);},
+  transition(){this.noise(0.3,0.1);this.sweep(200,50,0.4,'sawtooth',0.08);},
+  dayGlitch(){this.noise(0.15,0.05);this.sweep(800,200,0.1,'square',0.04);},
+  endingA(){this.chord([523,659,784,1047,1319],1.2,'sine',0.08);},
+  endingB(){this.sweep(400,80,0.8,'sawtooth',0.1);this.noise(0.3,0.05);},
+  endingC(){this.chord([392,494,587,784],1.0,'triangle',0.08);this.tone(880,0.6,'sine',0.05,0.3);},
+  fuelFull(){this.sweep(200,1000,0.3,'square',0.1);this.tone(1200,0.2,'sine',0.06,0.1);},
+  startGame(){this.chord([330,415,494],0.3,'triangle',0.08);},
+};
+
+// ===================== ENDING COLLECTION (localStorage) =====================
+const Endings={
+  KEY:'raccoon_endings',
+  unlocked:[],
+  initiallyUnlocked:[],
+  load(){
+    try{const d=localStorage.getItem(this.KEY);if(d)this.unlocked=JSON.parse(d);}catch(e){}
+    // Snapshot the state before this playthrough
+    this.initiallyUnlocked=[...this.unlocked];
+  },
+  save(){
+    try{localStorage.setItem(this.KEY,JSON.stringify(this.unlocked));}catch(e){}
+  },
+  unlock(id){
+    if(!this.unlocked.includes(id)){
+      this.unlocked.push(id);
+      this.save();
+    }
+  },
+  isUnlocked(id){return this.unlocked.includes(id);},
+  wasUnlockedBefore(id){return this.initiallyUnlocked.includes(id);},
+  render(){
+    ['A','B','C'].forEach(id=>{
+      const dot=document.getElementById('ec-'+id);
+      if(!dot)return;
+      if(this.isUnlocked(id)){
+        dot.classList.remove('locked');
+        dot.classList.add('unlocked');
+      }else{
+        dot.classList.add('locked');
+        dot.classList.remove('unlocked');
+      }
+    });
+  }
+};
+
+// ===================== PERFECT CLEAR REWARD =====================
+const PerfectClear={
+  KEY:'raccoon_perfect_clear',
+  seen:false,
+  _particleTimer:null,
+  load(){
+    try{const d=localStorage.getItem(this.KEY);if(d)this.seen=JSON.parse(d);}catch(e){}
+  },
+  save(){
+    try{localStorage.setItem(this.KEY,JSON.stringify(this.seen));}catch(e){}
+  },
+  isPerfect(){
+    return Endings.unlocked.length>=3;
+  },
+  // Spawn golden particles continuously
+  startGoldRain(){
+    const layer=document.getElementById('perfect-clear-layer');
+    if(!layer)return;
+    layer.classList.add('active');
+    const spawn=()=>{
+      if(!layer.classList.contains('active'))return;
+      const p=document.createElement('div');
+      p.className='gold-particle';
+      const left=Math.random()*100;
+      const drift=(Math.random()-0.5)*80;
+      const dur=3+Math.random()*3;
+      const size=3+Math.random()*4;
+      p.style.cssText='left:'+left+'%;top:-10px;width:'+size+'px;height:'+size+'px;--drift:'+drift+'px;animation:gold-fall '+dur+'s linear forwards';
+      layer.appendChild(p);
+      setTimeout(()=>{if(p.parentNode)p.parentNode.removeChild(p);},dur*1000+200);
+    };
+    // Spawn initial burst
+    for(let i=0;i<15;i++)setTimeout(spawn,i*80);
+    // Continuous spawn
+    this._particleTimer=setInterval(spawn,200);
+  },
+  stopGoldRain(){
+    const layer=document.getElementById('perfect-clear-layer');
+    if(layer)layer.classList.remove('active');
+    if(this._particleTimer){clearInterval(this._particleTimer);this._particleTimer=null;}
+  },
+  // Show the easter egg story with typing effect
+  showEasterEgg(){
+    const modal=document.getElementById('easter-egg-modal');
+    const textEl=document.getElementById('easter-egg-text');
+    const closeBtn=document.getElementById('easter-egg-close');
+    if(!modal||!textEl)return;
+
+    const story=[
+      '嘿，你居然把三个结局都打出来了。',
+      '白天被早七支配，夜晚滑板炸街——',
+      '这就是浣熊大帝的赛博日常。',
+      '但你比他更狠，你把他的人生翻了个底朝天。',
+      '',
+      '<span class="highlight">完美燃尽</span>时，你陪他燃到了最后；',
+      '<span class="highlight">翻车社死</span>时，你看着他脸着地；',
+      '<span class="highlight">社畜同盟</span>时，你发现了那个秘密。',
+      '',
+      '现在，浣熊大帝有个秘密想告诉你——',
+      '<span class="highlight">"其实那个蓝色工牌...每个社畜都有一个。"</span>',
+      '"你以为你在玩游戏，"',
+      '"但其实——你也是浣熊大帝。"',
+      '',
+      '👑 感谢游玩。明天，又要上班了。'
+    ];
+    const fullHTML=story.join('<br>');
+
+    modal.classList.add('active');
+    textEl.innerHTML='';
+    textEl.classList.add('easter-egg-typing');
+
+    // Typing effect: reveal line by line
+    let lineIdx=0;
+    const typeNext=()=>{
+      if(lineIdx>=story.length){
+        textEl.classList.remove('easter-egg-typing');
+        if(closeBtn){
+          closeBtn.style.display='inline-block';
+          closeBtn.style.opacity='0';
+          closeBtn.style.transition='opacity .6s ease';
+          requestAnimationFrame(()=>{closeBtn.style.opacity='1';});
+        }
+        return;
+      }
+      const current=story.slice(0,lineIdx+1).join('<br>');
+      textEl.innerHTML=current;
+      lineIdx++;
+      const delay=story[lineIdx-1]===''?300:700+story[lineIdx-1].length*30;
+      setTimeout(typeNext,delay);
+    };
+    setTimeout(typeNext,500);
+  },
+  hideEasterEgg(){
+    const modal=document.getElementById('easter-egg-modal');
+    if(modal)modal.classList.remove('active');
+  },
+  // Main trigger: called from showTitle when all endings unlocked
+  trigger(){
+    if(!this.isPerfect())return;
+    // Apply golden styling to title elements
+    const title=document.querySelector('.game-title');
+    const subtitle=document.querySelector('.game-subtitle');
+    const divider=document.querySelector('.title-divider');
+    const ec=document.getElementById('ending-collection');
+    if(title)title.classList.add('perfect');
+    if(subtitle)subtitle.classList.add('perfect');
+    if(divider)divider.classList.add('perfect');
+    if(ec)ec.classList.add('perfect');
+
+    // Start golden particle rain
+    this.startGoldRain();
+
+    // Show perfect badge
+    const badge=document.getElementById('perfect-badge');
+    if(badge){
+      setTimeout(()=>{badge.classList.add('show');},800);
+      // Hide badge after 4 seconds
+      setTimeout(()=>{badge.classList.remove('show');},4800);
+    }
+
+    // Show easter egg story after badge (only if not seen before)
+    if(!this.seen){
+      setTimeout(()=>{
+        this.showEasterEgg();
+        this.seen=true;
+        this.save();
+      },5500);
+    }
+
+    // Setup close button
+    const closeBtn=document.getElementById('easter-egg-close');
+    if(closeBtn){
+      closeBtn.onclick=()=>{this.hideEasterEgg();};
+    }
+  },
+  // Cleanup when leaving title screen
+  cleanup(){
+    this.stopGoldRain();
+    const badge=document.getElementById('perfect-badge');
+    if(badge)badge.classList.remove('show');
+    this.hideEasterEgg();
+  }
+};
+
+// ===================== CHECK-IN SYSTEM =====================
+const CheckIn={
+  KEY:'raccoon_checkin',
+  data:{lastDate:'',streak:0,total:0,history:[]}, // history = ['2026-08-10','2026-08-09',...]
+  weekDays:['一','二','三','四','五','六','日'],
+  rewards:[
+    '☕ 今日咖啡续命 +1',
+    '📋 老板画饼免疫力 +1',
+    '🎮 抽卡手气微升',
+    '😴 午休不入梦 +1',
+    '🛹 滑板平衡感 +1',
+    '🎵 节奏感 +1',
+    '🦝 浣熊之魂觉醒中...',
+  ],
+  todayStr(){
+    const d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  },
+  load(){
+    try{
+      const d=localStorage.getItem(this.KEY);
+      if(d)this.data=JSON.parse(d);
+    }catch(e){}
+  },
+  save(){
+    try{localStorage.setItem(this.KEY,JSON.stringify(this.data));}catch(e){}
+  },
+  hasCheckedToday(){
+    return this.data.lastDate===this.todayStr();
+  },
+  // Get the dates of this week (Mon-Sun)
+  getWeekDates(){
+    const now=new Date();
+    const day=now.getDay()||7; // 0=Sun -> 7
+    const monday=new Date(now);
+    monday.setDate(now.getDate()-day+1);
+    const dates=[];
+    for(let i=0;i<7;i++){
+      const d=new Date(monday);
+      d.setDate(monday.getDate()+i);
+      dates.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+    }
+    return dates;
+  },
+  doCheckIn(){
+    if(this.hasCheckedToday())return null;
+    const today=this.todayStr();
+    // Check if yesterday was checked (for streak)
+    const yesterday=new Date();
+    yesterday.setDate(yesterday.getDate()-1);
+    const yStr=yesterday.getFullYear()+'-'+String(yesterday.getMonth()+1).padStart(2,'0')+'-'+String(yesterday.getDate()).padStart(2,'0');
+    if(this.data.lastDate===yStr){
+      this.data.streak++;
+    }else{
+      this.data.streak=1;
+    }
+    this.data.total++;
+    this.data.lastDate=today;
+    this.data.history.push(today);
+    // Keep history to last 365 days
+    if(this.data.history.length>365)this.data.history.shift();
+    this.save();
+    // Return reward based on day of week
+    const dayIdx=(new Date().getDay()||7)-1; // 0=Mon
+    return this.rewards[dayIdx];
+  },
+  isCheckedOn(dateStr){
+    return this.data.history.includes(dateStr);
+  },
+  render(){
+    const overlay=document.getElementById('checkin-overlay');
+    const grid=document.getElementById('checkin-grid');
+    const streakEl=document.getElementById('checkin-streak');
+    const totalEl=document.getElementById('checkin-total');
+    const btn=document.getElementById('checkin-btn');
+    const rewardEl=document.getElementById('checkin-reward');
+    if(!grid)return;
+    // Stats
+    streakEl.textContent=this.data.streak;
+    totalEl.textContent=this.data.total;
+    // Week grid
+    const weekDates=this.getWeekDates();
+    const today=this.todayStr();
+    const todayIdx=weekDates.indexOf(today);
+    grid.innerHTML='';
+    weekDates.forEach((dateStr,i)=>{
+      const day=document.createElement('div');
+      day.className='checkin-day';
+      const checked=this.isCheckedOn(dateStr);
+      const isToday=(i===todayIdx);
+      if(checked)day.classList.add('checked');
+      if(isToday)day.classList.add('today');
+      if(isToday&&!checked)day.classList.add('can-check');
+      if(checked&&isToday)day.classList.add('checked-today');
+      const label=document.createElement('div');
+      label.className='checkin-day-label';
+      label.textContent='周'+this.weekDays[i];
+      const icon=document.createElement('div');
+      icon.className='checkin-day-icon';
+      icon.textContent=checked?'✓':(isToday?'✋':'');
+      day.appendChild(label);
+      day.appendChild(icon);
+      grid.appendChild(day);
+    });
+    // Button state
+    if(this.hasCheckedToday()){
+      btn.textContent='今日已签到 ✓';
+      btn.disabled=true;
+      rewardEl.textContent='明天再来吧～';
+    }else{
+      btn.textContent='签 到';
+      btn.disabled=false;
+      rewardEl.textContent='点击签到领取今日奖励';
+    }
+    // Show overlay
+    overlay.classList.add('active');
+  },
+  hide(){
+    document.getElementById('checkin-overlay').classList.remove('active');
+  },
+  init(){
+    this.load();
+    // Open button on title screen
+    document.getElementById('checkin-open-btn').addEventListener('click',e=>{
+      e.stopPropagation();
+      this.render();
+    });
+    // Close button
+    document.getElementById('checkin-close').addEventListener('click',e=>{
+      e.stopPropagation();
+      this.hide();
+    });
+    // Click outside to close
+    document.getElementById('checkin-overlay').addEventListener('click',e=>{
+      if(e.target.id==='checkin-overlay')this.hide();
+    });
+    // Check-in button
+    document.getElementById('checkin-btn').addEventListener('click',e=>{
+      e.stopPropagation();
+      if(this.hasCheckedToday())return;
+      const reward=this.doCheckIn();
+      // Play sound
+      try{SFX.perfect();}catch(e){}
+      // Update UI
+      this.render();
+      // Show reward
+      if(reward){
+        const rewardEl=document.getElementById('checkin-reward');
+        rewardEl.textContent='🎉 '+reward;
+        rewardEl.style.opacity='0';
+        setTimeout(()=>{rewardEl.style.opacity='1';},100);
+      }
+      // Update title screen button
+      const ciBtn=document.getElementById('checkin-open-btn');
+      if(ciBtn){
+        ciBtn.textContent='📅 已签到';
+        ciBtn.style.color='var(--neon-teal)';
+        ciBtn.style.borderColor='rgba(39,210,191,.3)';
+        ciBtn.style.animation='';
+      }
+    });
+  }
+};
+
+// ===================== CHARACTER PORTRAIT =====================
+const Portrait={
+  visible:false,
+  emotions:{
+    normal:{emoji:'🦝',cls:'',label:'浣熊'},
+    tired:{emoji:'😴',cls:'tired',label:'疲惫浣熊'},
+    angry:{emoji:'😤',cls:'angry',label:'愤怒浣熊'},
+    rebel:{emoji:'😎',cls:'rebel',label:'叛逆浣熊'},
+    happy:{emoji:'🙂',cls:'happy',label:'社恐浣熊'},
+    shock:{emoji:'😱',cls:'shock',label:'惊恐浣熊'},
+    dead:{emoji:'💀',cls:'tired',label:'灵魂出窍'},
+    cool:{emoji:'🤘',cls:'rebel',label:'炸街浣熊'},
+  },
+  show(emotion='normal'){
+    const e=this.emotions[emotion]||this.emotions.normal;
+    const box=document.getElementById('portrait-box');
+    const img=document.getElementById('portrait-img');
+    const lbl=document.getElementById('portrait-label');
+    img.className='portrait-img '+e.cls;
+    img.textContent=e.emoji;
+    lbl.textContent=e.label;
+    box.style.display='block';
+    box.classList.remove('bounce-in');
+    void box.offsetWidth;
+    box.classList.add('bounce-in');
+    this.visible=true;
+  },
+  hide(){
+    document.getElementById('portrait-box').style.display='none';
+    this.visible=false;
+  },
+  setEmotion(emotion){
+    if(!this.visible)return;
+    const e=this.emotions[emotion]||this.emotions.normal;
+    const img=document.getElementById('portrait-img');
+    const lbl=document.getElementById('portrait-label');
+    img.className='portrait-img '+e.cls;
+    img.textContent=e.emoji;
+    lbl.textContent=e.label;
+  }
+};
+
+// ===================== PARTICLE EFFECTS =====================
+const Particles={
+  burst(x,y,type='spark',count=12){
+    const container=document.getElementById('particle-container');
+    if(!container)return;
+    for(let i=0;i<count;i++){
+      const p=document.createElement('div');
+      p.className='particle '+type;
+      p.style.left=x+'px';
+      p.style.top=y+'px';
+      const angle=(Math.PI*2/count)*i+Math.random()*0.5;
+      const speed=30+Math.random()*80;
+      const dx=Math.cos(angle)*speed;
+      const dy=Math.sin(angle)*speed-20;
+      p.style.transition='transform 0.6s cubic-bezier(.2,.6,.4,1),opacity 0.6s ease';
+      container.appendChild(p);
+      requestAnimationFrame(()=>{
+        p.style.transform=`translate(${dx}px,${dy}px) scale(0)`;
+        p.style.opacity='0';
+      });
+      setTimeout(()=>p.remove(),650);
+    }
+  },
+  burstFromZone(type='spark',count=15){
+    const zone=document.getElementById('hit-zone');
+    if(!zone)return;
+    const rect=zone.getBoundingClientRect();
+    const x=rect.left+rect.width/2;
+    const y=rect.top+rect.height/2;
+    this.burst(x,y,type,count);
+  }
+};
+
+// ===================== SCREEN FLASH =====================
+function flashScreen(type){
+  const el=document.getElementById('screen-flash');
+  if(!el)return;
+  // Reset and restart animation cleanly without inline styles
+  el.className='screen-flash';
+  void el.offsetWidth; // Force reflow to restart animation
+  el.className='screen-flash flash-'+type;
+  // Clean up after animation
+  clearTimeout(el._flashTimer);
+  el._flashTimer=setTimeout(()=>{el.className='screen-flash';},350);
+}
+
+// ===================== SCREEN SHAKE =====================
+function shakeScreen(){
+  const game=document.getElementById('game');
+  game.classList.remove('shake-screen');
+  void game.offsetWidth;
+  game.classList.add('shake-screen');
+  setTimeout(()=>game.classList.remove('shake-screen'),200);
+}
+
+// ===================== AUDIO =====================
+let audio=null;
+function initAudio(){
+  audio=new Audio('assets/audio.wav');
+  audio.preload='auto';
+  audio.addEventListener('canplaythrough',()=>{if(S.screen==='loading'){S.audioReady=true;showTitle();}});
+  audio.addEventListener('progress',()=>{
+    if(S.screen==='loading'&&audio.buffered.length>0){
+      const pct=Math.round(audio.buffered.end(audio.buffered.length-1)/audio.duration*100);
+      document.getElementById('loading-fill').style.width=Math.min(pct,100)+'%';
+      document.getElementById('loading-text').textContent='加载中... '+Math.min(pct,100)+'%';
+    }
+  });
+  audio.addEventListener('error',()=>{
+    if(S.screen==='loading')document.getElementById('loading-text').textContent='音频加载失败，请刷新重试';
+  });
+  audio.addEventListener('ended',()=>{
+    if(!S.endingDetermined){
+      // Fallback: if audio ends without reaching ending trigger, show ending now
+      if(audio.currentTime>=200||audio.duration<206){
+        showEnding();
+      }else{
+        audio.currentTime=0;
+        audio.play();
+      }
+    }
+  });
+  // Fallback: if canplaythrough doesn't fire in 15s, allow start anyway
+  setTimeout(()=>{if(!S.audioReady&&S.screen==='loading'){S.audioReady=true;showTitle();}},15000);
+}
+function showTitle(){
+  document.getElementById('loading-fill').style.width='100%';
+  document.getElementById('loading-text').textContent='加载完成！';
+  Endings.load();
+  Endings.render();
+  CheckIn.load();
+  PerfectClear.load();
+  // Update check-in button state
+  const ciBtn=document.getElementById('checkin-open-btn');
+  if(ciBtn){
+    if(!CheckIn.hasCheckedToday()){
+      ciBtn.textContent='📅 签到 ●';
+      ciBtn.style.color='var(--neon-orange)';
+      ciBtn.style.borderColor='rgba(255,140,66,.4)';
+      ciBtn.style.animation='checkin-pulse 1.5s ease-in-out infinite';
+    }else{
+      ciBtn.textContent='📅 已签到';
+      ciBtn.style.color='var(--neon-teal)';
+      ciBtn.style.borderColor='rgba(39,210,191,.3)';
+      ciBtn.style.animation='';
+    }
+  }
+  setTimeout(()=>{
+    switchScreen('title-screen');
+    // Trigger perfect clear reward if all endings unlocked
+    if(PerfectClear.isPerfect()){
+      PerfectClear.trigger();
+    }
+    // Show check-in popup after title screen appears
+    setTimeout(()=>{
+      if(!CheckIn.hasCheckedToday()){
+        CheckIn.render();
+      }
+    },800);
+  },500);
+}
+function startGame(){
+  // Cleanup perfect clear effects when leaving title
+  PerfectClear.cleanup();
+  SFX.init();
+  SFX.startGame();
+  switchScreen('day-screen');
+  audio.currentTime=0;
+  audio.play().catch(()=>{});
+  Portrait.show('tired');
+  _gameStartReal=Date.now();
+  requestAnimationFrame(gameLoop);
+}
+
+// ===================== GAME LOOP =====================
+let _lastAudioTime=0,_stallCount=0;
+let _rhythmStartReal=0; // Real-time timestamp when rhythm game started
+let _gameStartReal=0;   // Real-time timestamp when game started
+function gameLoop(){
+  try{
+    if(audio){
+      const t=audio.currentTime;
+      if(!audio.paused){
+        // Detect stalled audio (currentTime not advancing)
+        if(Math.abs(t-_lastAudioTime)<0.01&&t>0){
+          _stallCount++;
+          if(_stallCount>90&&t>=168&&!S.endingDetermined){
+            // Audio stalled for ~1.5s during rhythm game, force ending
+            console.warn('Audio stalled, forcing ending at t='+t);
+            showEnding();
+          }
+        }else{
+          _stallCount=0;
+        }
+        _lastAudioTime=t;
+        checkTimeline(t);
+        if(S.rhythmActive)updateRhythm(t);
+        updateLyrics(t);
+        updateSeekBar(t);
+      }else{
+        // Audio is paused - still check timeline for ending trigger
+        if(!S.endingDetermined&&t>=206){
+          console.log('[GAMELOOP] Audio paused but t>=206, triggering ending');
+          showEnding();
+        }
+        // Try to resume audio if paused during gameplay
+        if(!S.endingDetermined&&S.screen!=='loading'&&S.screen!=='title'&&t>0){
+          audio.play().catch(()=>{});
+        }
+      }
+    }
+  }catch(e){
+    console.error('GameLoop error:',e.message);
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+// ===================== TIMELINE =====================
+function checkTimeline(t){
+  // Day scene video switching
+  try{
+    if(S.screen==='day'&&!S.endingDetermined){
+      const DAY_SCENES=[{t:0,id:'day-bg-1'},{t:50,id:'day-bg-2'},{t:88,id:'day-bg-3'},{t:124,id:'day-bg-4'}];
+      for(let i=DAY_SCENES.length-1;i>=0;i--){
+        if(t>=DAY_SCENES[i].t){
+          if(S.currentDayScene!==i){
+            S.currentDayScene=i;
+            document.querySelectorAll('.scene-bg-day').forEach(v=>v.classList.remove('active'));
+            document.getElementById(DAY_SCENES[i].id).classList.add('active');
+            const gf=document.getElementById('day-glitch-flash');
+            gf.classList.remove('active');
+            void gf.offsetWidth;
+            gf.classList.add('active');
+            SFX.dayGlitch();
+          }
+          break;
+        }
+      }
+    }
+  }catch(e){console.error('DayScene error:',e);}
+  // Timeline events
+  try{
+    for(let i=0;i<TIMELINE.length;i++){
+      const ev=TIMELINE[i];
+      if(t>=ev.t&&!S.triggered.has(i)){
+        S.triggered.add(i);
+        handleEvent(ev);
+      }
+    }
+  }catch(e){console.error('Timeline events error:',e);}
+  // Check rhythm start
+  try{
+    if(t>=168.3&&!S.rhythmActive&&!S.endingDetermined){
+      startRhythm();
+    }
+  }catch(e){console.error('Rhythm start error:',e);}
+  // Check ending - MUST always run regardless of errors above
+  try{
+    if(t>=206&&!S.endingDetermined){
+      console.log('[ENDING] Triggering at t='+t+', screen='+S.screen);
+      showEnding();
+    }
+  }catch(e){
+    console.error('Ending trigger error:',e);
+    // Ultimate fallback
+    S.endingDetermined=true;
+    S.rhythmActive=false;
+    switchScreen('ending-screen');
+  }
+}
+// Global debug functions for testing
+window.gameDebug=function(){
+  console.log('=== GAME DEBUG ===');
+  console.log('screen:',S.screen);
+  console.log('audio:',audio?'exists':'null');
+  if(audio){
+    console.log('audio.currentTime:',audio.currentTime);
+    console.log('audio.paused:',audio.paused);
+    console.log('audio.duration:',audio.duration);
+  }
+  console.log('endingDetermined:',S.endingDetermined);
+  console.log('rhythmActive:',S.rhythmActive);
+  console.log('triggered events:',S.triggered.size+'/'+TIMELINE.length);
+  console.log('fuel:',S.fuel,'combo:',S.combo,'maxCombo:',S.maxCombo);
+  console.log('==================');
+};
+window.forceEnding=function(){
+  console.log('[FORCE] Calling showEnding()');
+  showEnding();
+};
+window.skipTo=function(time){
+  if(audio){
+    audio.currentTime=time;
+    console.log('[SKIP] Set audio.currentTime='+time+', actual='+audio.currentTime);
+  }
+};
+function handleEvent(ev){
+  if(ev.a==='narration')showNarration(ev.text);
+  else if(ev.a==='qte')startQTE(ev);
+  else if(ev.a==='choice')showChoices(ev);
+  else if(ev.a==='transition')doTransition(ev.text);
+}
+
+// ===================== NARRATION =====================
+function showNarration(text){
+  clearTimeout(S.typewriterTimer);
+  const el=document.getElementById('dialogue-text');
+  el.innerHTML='';
+  // Hide QTE and choices if active
+  document.getElementById('qte-area').classList.remove('active');
+  S.qteActive=false;
+  document.getElementById('choices-area').classList.remove('active');
+  S.choiceActive=false;
+  // Auto-detect portrait emotion from text keywords
+  if(Portrait.visible){
+    if(/怒|气|炸|吼|瞪|摔|暗骂|MMP/.test(text))Portrait.setEmotion('angry');
+    else if(/困|累|疲惫|睁不开|灵魂|抽离|瘫|趴/.test(text))Portrait.setEmotion('dead');
+    else if(/梦|战神|主角|自由|溜了/.test(text))Portrait.setEmotion('rebel');
+    else if(/惊|雷|吓|差点|好险/.test(text))Portrait.setEmotion('shock');
+    else if(/笑|敷衍|附和|假笑/.test(text))Portrait.setEmotion('happy');
+    else Portrait.setEmotion('tired');
+  }
+  // Typewriter effect
+  let i=0;
+  function type(){
+    if(i<text.length){
+      el.textContent=text.slice(0,i+1);
+      i++;
+      S.typewriterTimer=setTimeout(type,30);
+    }
+  }
+  type();
+}
+
+// ===================== QTE =====================
+function startQTE(ev){
+  S.qteActive=true;
+  S.qteClicks=0;
+  S.qteTarget=ev.target;
+  S.qteStart=audio.currentTime;
+  S.qteDur=ev.dur;
+  S.qteFuelOK=ev.fuelOK;
+  S.qteFuelFail=ev.fuelFail;
+  document.getElementById('qte-prompt').textContent=ev.prompt;
+  document.getElementById('qte-fill').style.width='0%';
+  document.getElementById('qte-area').classList.add('active');
+  // Hide narration
+  document.getElementById('dialogue-text').textContent='';
+  // Show appropriate portrait
+  if(ev.prompt.includes('老板'))Portrait.setEmotion('shock');
+  else if(ev.prompt.includes('灵感'))Portrait.setEmotion('rebel');
+  else Portrait.setEmotion('angry');
+}
+function handleQTEClick(){
+  if(!S.qteActive)return;
+  S.qteClicks++;
+  SFX.tone(200+Math.random()*200,0.04,'square',0.05);
+  const pct=Math.min(S.qteClicks/S.qteTarget*100,100);
+  document.getElementById('qte-fill').style.width=pct+'%';
+  if(S.qteClicks>=S.qteTarget){
+    endQTE(true);
+  }
+}
+function endQTE(success){
+  if(!S.qteActive)return;
+  S.qteActive=false;
+  document.getElementById('qte-area').classList.remove('active');
+  if(success){
+    SFX.qteSuccess();
+    addFuel(S.qteFuelOK);
+    showNarration('好险...差点被发现。手速还行！');
+    Portrait.setEmotion('happy');
+  }else{
+    SFX.qteFail();
+    addFuel(S.qteFuelFail);
+    showNarration('被老板瞪了一眼...心里又憋了一肚子气。');
+    Portrait.setEmotion('angry');
+  }
+}
+function checkQTETimeout(t){
+  if(S.qteActive&&t-S.qteStart>=S.qteDur){
+    endQTE(S.qteClicks>=S.qteTarget);
+  }
+}
+
+// ===================== CHOICES =====================
+function showChoices(ev){
+  S.choiceActive=true;
+  document.getElementById('dialogue-text').textContent=ev.text;
+  if(Portrait.visible)Portrait.setEmotion('shock');
+  const area=document.getElementById('choices-area');
+  area.innerHTML='';
+  ev.opts.forEach((opt,idx)=>{
+    const btn=document.createElement('button');
+    btn.className='choice-btn';
+    btn.textContent=opt.txt;
+    // Add tags for special choices
+    if(opt.flag==='rebellious'||opt.flag==='sneaked_out'){
+      const tag=document.createElement('span');
+      tag.className='choice-tag rebel';
+      tag.textContent='叛逆';
+      btn.appendChild(tag);
+    }
+    if(opt.flag==='ally'){
+      const tag=document.createElement('span');
+      tag.className='choice-tag ally';
+      tag.textContent='同盟';
+      btn.appendChild(tag);
+    }
+    btn.onclick=()=>handleChoice(opt);
+    area.appendChild(btn);
+  });
+  area.classList.add('active');
+  // Hide QTE
+  document.getElementById('qte-area').classList.remove('active');
+  S.qteActive=false;
+}
+function handleChoice(opt){
+  S.choiceActive=false;
+  SFX.choiceSelect();
+  document.getElementById('choices-area').classList.remove('active');
+  addFuel(opt.fuel);
+  if(opt.flag)S.flags.push(opt.flag);
+  // Update portrait based on choice
+  if(opt.flag==='rebellious'||opt.flag==='sneaked_out')Portrait.setEmotion('rebel');
+  else if(opt.flag==='ally')Portrait.setEmotion('happy');
+  else Portrait.setEmotion('tired');
+  // Show reaction
+  const reactions={
+    '低头认命，继续肝':'行吧...为了那点工资。',
+    '心里暗骂，偷偷翻白眼':'（内心：你开迈巴赫，我骑共享单车。）',
+    '帮旁边的同事挡了一下枪':'同事投来感激的眼神。兄弟，懂的都懂。',
+    '假笑附和："好的老板"':'嘴角上扬，灵魂已死。',
+    '表面点头，心里已经炸了':'表面笑嘻嘻，心里MMP。',
+    '叹气扒拉两口，接着肝分镜':'生活嘛...就是这样。汤都没了。',
+    '怒摔外卖！跑楼下滑板一圈！':'溜了溜了！十分钟的自由也是自由！'
+  };
+  showNarration(reactions[opt.txt]||'...');
+}
+
+// ===================== FUEL =====================
+function addFuel(amt){
+  const wasFull=S.fuel>=100;
+  S.fuel=Math.min(100,S.fuel+amt);
+  S.power=S.fuel; // Power starts from fuel
+  const fill=document.getElementById('fuel-fill');
+  const val=document.getElementById('fuel-value');
+  fill.style.width=S.fuel+'%';
+  val.textContent=S.fuel;
+  const meter=document.getElementById('fuel-meter');
+  meter.classList.add('shake');
+  setTimeout(()=>meter.classList.remove('shake'),300);
+  if(S.fuel>=100&&!wasFull){
+    SFX.fuelFull();
+    flashScreen('perfect');
+    showNarration('⚠️ 怨气值已满！即将爆发！');
+    Portrait.setEmotion('angry');
+  }
+}
+
+// ===================== TRANSITION =====================
+function doTransition(text){
+  SFX.transition();
+  Portrait.hide();
+  switchScreen('transition-screen');
+  const txt=document.getElementById('transition-text');
+  const glitch=document.getElementById('glitch-overlay');
+  txt.textContent=text;
+  txt.classList.remove('show');
+  glitch.classList.remove('active');
+  // Show glitch effect first
+  glitch.classList.add('active');
+  setTimeout(()=>{
+    glitch.classList.remove('active');
+    txt.classList.add('show');
+  },600);
+}
+
+// ===================== RHYTHM GAME =====================
+function startRhythm(){
+  S.rhythmActive=true;
+  S.combo=0;
+  S.maxCombo=0;
+  S.stats={perfect:0,good:0,miss:0};
+  S.hitBeats=0;
+  S.notes=[];
+  S.nextBeat=0;
+  _rhythmStartReal=Date.now(); // Record real-time start
+  switchScreen('night-screen');
+  updatePowerDisplay();
+  updateComboDisplay();
+}
+function spawnNotes(t){
+  while(S.nextBeat<BEATS.length){
+    const beat=BEATS[S.nextBeat];
+    if(beat.t-t<=2.2){
+      const note=document.createElement('div');
+      note.className='note'+(beat.strong?' strong':'');
+      note.dataset.beatTime=beat.t;
+      if(beat.lyric){
+        const ly=document.createElement('span');
+        ly.className='note-lyric';
+        ly.textContent=beat.lyric;
+        note.appendChild(ly);
+      }
+      document.getElementById('rhythm-area').appendChild(note);
+      S.notes.push({beat:beat,el:note,hit:false,missed:false,spawn:t});
+      S.nextBeat++;
+    }else break;
+  }
+}
+function updateRhythm(t){
+  spawnNotes(t);
+  const area=document.getElementById('rhythm-area');
+  const areaH=area.clientHeight;
+  const hitY=areaH*0.88;
+  for(let i=S.notes.length-1;i>=0;i--){
+    const n=S.notes[i];
+    if(n.hit||n.missed)continue;
+    const timeUntil=n.beat.t-t;
+    const progress=1-(timeUntil/2.2);
+    const y=Math.max(0,progress*hitY);
+    n.el.style.top=y+'px';
+    if(t>n.beat.t+0.35){
+      n.missed=true;
+      S.stats.miss++;
+      S.combo=0;
+      updateComboDisplay();
+      showFeedback('MISS','miss');
+      SFX.miss();
+      flashScreen('miss');
+      // Remove fever mode
+      document.getElementById('combo-display').classList.remove('fever');
+      document.getElementById('combo-num').classList.remove('fever');
+      document.getElementById('combo-label').classList.remove('fever');
+      n.el.classList.add('note-missed');
+      const el=n.el;
+      setTimeout(()=>el.remove(),400);
+      S.notes.splice(i,1);
+    }
+  }
+  checkQTETimeout(t);
+}
+function handleRhythmHit(){
+  if(!S.rhythmActive)return;
+  const t=audio.currentTime;
+  let best=null,bestDiff=Infinity;
+  for(const n of S.notes){
+    if(n.hit||n.missed)continue;
+    const diff=Math.abs(t-n.beat.t);
+    if(diff<bestDiff){bestDiff=diff;best=n;}
+  }
+  if(best&&bestDiff<0.35){
+    best.hit=true;
+    S.hitBeats++;
+    if(bestDiff<0.12){
+      S.stats.perfect++;S.combo++;
+      showFeedback('PERFECT!','perfect');
+      addPower(6);
+      pulseBeat();
+      SFX.perfect();
+      flashScreen('perfect');
+      Particles.burstFromZone('spark',16);
+      if(best.beat.strong){
+        shakeScreen();
+        Particles.burstFromZone('star',8);
+      }
+    }else{
+      S.stats.good++;S.combo++;
+      showFeedback('GOOD','good');
+      addPower(3);
+      SFX.good();
+      flashScreen('good');
+      Particles.burstFromZone('spark',8);
+    }
+    if(S.combo>S.maxCombo)S.maxCombo=S.combo;
+    // Combo milestones with special effects
+    if(S.combo===5){
+      showFeedback('🔥 COMBO×5!','perfect');
+    }
+    if(S.combo===10){
+      showFeedback('🔥🔥 COMBO×10!','perfect');
+      SFX.combo10();
+      shakeScreen();
+      Particles.burstFromZone('star',20);
+    }
+    if(S.combo===15){
+      // Enter fever mode
+      document.getElementById('combo-display').classList.add('fever');
+      document.getElementById('combo-num').classList.add('fever');
+      document.getElementById('combo-label').classList.add('fever');
+      showFeedback('⚡ FEVER MODE!','perfect');
+      SFX.combo20();
+      shakeScreen();
+    }
+    if(S.combo===20){
+      showFeedback('🔥🔥🔥 UNSTOPPABLE!','perfect');
+      SFX.combo20();
+      shakeScreen();
+      Particles.burstFromZone('ember',24);
+    }
+    if(S.combo===25){
+      showFeedback('💀 GODLIKE!','perfect');
+      SFX.combo20();
+      shakeScreen();
+      flashScreen('perfect');
+    }
+    updateComboDisplay();
+    // Show lyric
+    if(best.beat.lyric){
+      document.getElementById('rhythm-lyrics').textContent=best.beat.lyric;
+    }
+    best.el.classList.add('note-hit');
+    const el=best.el;
+    setTimeout(()=>el.remove(),300);
+    const idx=S.notes.indexOf(best);
+    S.notes.splice(idx,1);
+  }else{
+    // No note in range - empty tap, small penalty feedback
+    SFX.tone(120,0.05,'sawtooth',0.04);
+  }
+}
+function pulseBeat(){
+  const p=document.getElementById('beat-pulse');
+  p.classList.add('active');
+  setTimeout(()=>p.classList.remove('active'),150);
+}
+function addPower(amt){
+  S.power=Math.min(100,S.power+amt);
+  updatePowerDisplay();
+}
+function updatePowerDisplay(){
+  document.getElementById('power-fill').style.width=S.power+'%';
+  document.getElementById('power-value').textContent=Math.round(S.power);
+}
+function updateComboDisplay(){
+  const el=document.getElementById('combo-num');
+  el.textContent=S.combo;
+  if(S.combo>0){
+    el.classList.add('bounce');
+    setTimeout(()=>el.classList.remove('bounce'),200);
+  }
+}
+function showFeedback(text,type){
+  const el=document.getElementById('hit-feedback');
+  el.textContent=text;
+  el.className='hit-feedback '+type;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),600);
+}
+
+// ===================== ENDING =====================
+function calcAccuracy(){
+  const total=S.stats.perfect+S.stats.good+S.stats.miss;
+  if(total===0)return 0;
+  return Math.round((S.stats.perfect*1.0+S.stats.good*0.6)/total*100);
+}
+function determineEnding(){
+  const acc=calcAccuracy();
+  const hasAlly=S.flags.includes('ally');
+  // Hidden ending: ally flag + decent performance
+  if(hasAlly&&S.fuel>=45&&acc>=55)return 'C';
+  // Perfect ending
+  if(S.fuel>=65&&acc>=70)return 'A';
+  // Fail ending
+  return 'B';
+}
+function showEnding(){
+  console.log('[SHOW_ENDING] Called, endingDetermined='+S.endingDetermined+', screen='+S.screen);
+  if(S.endingDetermined){
+    console.log('[SHOW_ENDING] Already determined, skipping');
+    return;
+  }
+  // IMMEDIATELY set flags and switch screen - do this BEFORE anything else
+  S.endingDetermined=true;
+  S.rhythmActive=false;
+  S.qteActive=false;
+  S.choiceActive=false;
+  try{
+    // Switch to ending screen first
+    switchScreen('ending-screen');
+    console.log('[SHOW_ENDING] Screen switched to ending-screen');
+  }catch(e){
+    console.error('[SHOW_ENDING] switchScreen failed:',e);
+    // Direct DOM manipulation as fallback
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('ending-screen').classList.add('active');
+  }
+  // Now try to set up the ending content
+  try{
+    _showEndingImpl();
+  }catch(e){
+    console.error('[SHOW_ENDING] Content setup failed:',e);
+    // Fallback: show basic ending
+    try{
+      const titleEl=document.getElementById('ending-title');
+      if(titleEl){titleEl.textContent='结局';titleEl.classList.add('show');}
+      const subEl=document.getElementById('ending-subtitle');
+      if(subEl){subEl.innerHTML='浣熊的日常还在继续...';subEl.classList.add('show');}
+      const restartBtn=document.getElementById('restart-btn');
+      if(restartBtn)restartBtn.classList.add('show');
+    }catch(e2){
+      console.error('[SHOW_ENDING] Fallback also failed:',e2);
+    }
+  }
+}
+function _showEndingImpl(){
+  const ending=determineEnding();
+  const acc=calcAccuracy();
+  let grade='C';
+  if(acc>=90&&S.maxCombo>=18)grade='S';
+  else if(acc>=75)grade='A';
+  else if(acc>=50)grade='B';
+  console.log('[ENDING] ending='+ending+', acc='+acc+', grade='+grade+', fuel='+S.fuel+', maxCombo='+S.maxCombo);
+
+  // Unlock ending in localStorage
+  try{Endings.unlock(ending);}catch(e){console.warn('Endings.unlock failed:',e);}
+
+  // Play ending-specific sound
+  setTimeout(()=>{
+    try{
+      if(ending==='A')SFX.endingA();
+      else if(ending==='B')SFX.endingB();
+      else SFX.endingC();
+    }catch(e){}
+  },300);
+
+  const data={
+    A:{title:'完美燃尽',subtitle:'浣熊大帝炸街成功！',story:'所有怨气在滑板上完美释放。<br>霓虹灯下，他是街头的王。<br>这一夜，值了。',
+       bg:'bg_night',color:'var(--neon-purple)'},
+    B:{title:'翻车社死',subtitle:'眼皮打架，灵魂抽离...',story:'一个失误，脸着地。<br>社死现场，无人能救。<br>但明天...还要上班。',
+       bg:'bg_crash',color:'var(--neon-red)'},
+    C:{title:'社畜同盟',subtitle:'等一下...那个工牌...',story:'街角的另一只浣熊，也戴着蓝色工牌。<br>你们对视一眼，心照不宣。<br>社畜同盟，从不独行。',
+       bg:'bg_night',color:'var(--neon-teal)'}
+  };
+  const d=data[ending];
+
+  // Flash effect on ending reveal
+  try{flashScreen(ending==='B'?'miss':'perfect');}catch(e){}
+
+  // Set background video
+  try{
+    const bgEl=document.getElementById('ending-bg');
+    if(bgEl){
+      bgEl.src='assets/'+d.bg+'.mp4';
+      bgEl.load();
+      if(ending==='C')bgEl.style.filter='brightness(.4) saturate(.8) hue-rotate(30deg)';
+      setTimeout(()=>{try{bgEl.classList.add('show');}catch(e){}},100);
+    }
+  }catch(e){console.warn('Ending bg setup failed:',e);}
+
+  // Set content
+  try{
+    const titleEl=document.getElementById('ending-title');
+    if(titleEl){
+      titleEl.textContent=d.title;
+      titleEl.style.color=d.color;
+      titleEl.style.textShadow='0 0 20px '+d.color+',0 0 40px '+d.color;
+    }
+    const subEl=document.getElementById('ending-subtitle');
+    if(subEl)subEl.innerHTML=d.subtitle;
+    const storyEl=document.getElementById('ending-story');
+    if(storyEl)storyEl.innerHTML=d.story;
+    // Score
+    const scoreEl=document.getElementById('ending-score');
+    if(scoreEl){
+      scoreEl.innerHTML=
+        '<div class="score-item"><div class="score-label">怨气值</div><div class="score-value">'+S.fuel+'</div></div>'+
+        '<div class="score-item"><div class="score-label">最高连击</div><div class="score-value">'+S.maxCombo+'</div></div>'+
+        '<div class="score-item"><div class="score-label">准确率</div><div class="score-value">'+acc+'%</div></div>'+
+        '<div class="score-item"><div class="score-label">评级</div><div class="score-grade">'+grade+'</div></div>';
+    }
+    // Show elements with delay
+    const badge=document.getElementById('ending-badge');
+    if(badge){
+      if(ending==='C'){
+        badge.classList.add('show');
+      }else{
+        badge.style.display='none';
+      }
+    }
+    // Add "newly unlocked" badge
+    try{
+      const wasNewlyUnlocked=!Endings.wasUnlockedBefore(ending);
+      if(wasNewlyUnlocked){
+        setTimeout(()=>{
+          try{
+            const newBadge=document.createElement('div');
+            newBadge.style.cssText='position:relative;z-index:3;display:inline-block;padding:4px 12px;background:rgba(255,140,66,.15);border:1px solid var(--neon-orange);border-radius:4px;color:var(--neon-orange);font-size:12px;letter-spacing:2px;margin-bottom:8px;opacity:0;animation:ending-reveal .8s ease 2.5s forwards';
+            newBadge.textContent='🆕 新结局解锁！';
+            document.getElementById('ending-content').insertBefore(newBadge,document.getElementById('ending-title'));
+          }catch(e){}
+        },100);
+      }
+    }catch(e){}
+    // Add ending collection progress
+    try{
+      const progressText='结局 '+Endings.unlocked.length+'/3 已解锁';
+      setTimeout(()=>{
+        try{
+          const progress=document.createElement('div');
+          progress.style.cssText='position:relative;z-index:3;font-size:12px;color:#666;letter-spacing:3px;margin-top:12px;opacity:0;animation:ending-reveal .8s ease 3.2s forwards';
+          progress.textContent=progressText;
+          document.getElementById('ending-content').appendChild(progress);
+        }catch(e){}
+      },100);
+    }catch(e){}
+    // Add perfect clear hint if all 3 endings unlocked
+    try{
+      if(Endings.unlocked.length>=3){
+        setTimeout(()=>{
+          try{
+            const hint=document.createElement('div');
+            hint.style.cssText='position:relative;z-index:3;margin-top:16px;padding:8px 16px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.4);border-radius:4px;color:#FFD700;font-size:13px;letter-spacing:2px;opacity:0;animation:ending-reveal .8s ease 3.8s forwards';
+            hint.innerHTML='👑 完美通关！返回标题画面查看隐藏彩蛋';
+            document.getElementById('ending-content').appendChild(hint);
+          }catch(e){}
+        },100);
+      }
+    }catch(e){}
+    // Reveal elements with delays
+    setTimeout(()=>{try{if(titleEl)titleEl.classList.add('show');}catch(e){}},300);
+    setTimeout(()=>{try{if(subEl)subEl.classList.add('show');}catch(e){}},800);
+    setTimeout(()=>{try{if(storyEl)storyEl.classList.add('show');}catch(e){}},1300);
+    setTimeout(()=>{try{if(scoreEl)scoreEl.classList.add('show');}catch(e){}},1800);
+    setTimeout(()=>{try{document.getElementById('restart-btn').classList.add('show');}catch(e){}},2800);
+    // Play ending narration
+    setTimeout(()=>{
+      try{
+        if(storyEl)storyEl.innerHTML+='<br><br><span style="color:'+d.color+';font-size:12px;letter-spacing:3px">闹钟又响...又是忙碌的一天。</span>';
+      }catch(e){}
+    },3500);
+  }catch(e){
+    console.error('[ENDING] Content setup error:',e);
+  }
+  console.log('[ENDING] _showEndingImpl completed');
+}
+
+// ===================== LYRICS =====================
+let lastLyricIdx=-1;
+function updateLyrics(t){
+  let idx=-1;
+  for(let i=0;i<LYRICS.length;i++){
+    if(t>=LYRICS[i].t)idx=i;else break;
+  }
+  if(idx!==lastLyricIdx&&idx>=0){
+    lastLyricIdx=idx;
+    const el=document.getElementById('lyrics');
+    if(S.screen==='day-screen'){
+      el.textContent=LYRICS[idx].text;
+      el.style.opacity='1';
+    }
+    if(S.rhythmActive){
+      const rEl=document.getElementById('rhythm-lyrics');
+      if(LYRICS[idx].t>=168&&LYRICS[idx].t<=206){
+        rEl.textContent=LYRICS[idx].text;
+      }
+    }
+  }
+}
+
+// ===================== SCREEN MGMT =====================
+function switchScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById(id);
+  el.classList.add('active');
+  S.screen=id.replace('-screen','');
+  // Show seek bar only during gameplay screens
+  const seekBar=document.getElementById('seek-bar');
+  if(id==='day-screen'||id==='night-screen'||id==='transition-screen'){
+    seekBar.classList.add('active');
+  }else{
+    seekBar.classList.remove('active');
+  }
+}
+
+// ===================== SEEK BAR =====================
+function formatTime(s){
+  if(!s||!isFinite(s))return '0:00';
+  const m=Math.floor(s/60);
+  const sec=Math.floor(s%60);
+  return m+':'+(sec<10?'0':'')+sec;
+}
+function updateSeekBar(t){
+  if(!audio||!audio.duration)return;
+  const pct=(t/audio.duration)*100;
+  const fill=document.getElementById('seek-fill');
+  const handle=document.getElementById('seek-handle');
+  const timeEl=document.getElementById('seek-time');
+  if(fill)fill.style.width=pct+'%';
+  if(handle)handle.style.left=pct+'%';
+  if(timeEl)timeEl.textContent=formatTime(t)+' / '+formatTime(audio.duration);
+}
+function seekToTime(t){
+  if(!audio||S.endingDetermined)return;
+  t=Math.max(0,Math.min(t,audio.duration-1));
+  console.log('[SEEK] Seeking to '+t+'s (from '+audio.currentTime+'s)');
+  // Clear active states
+  S.qteActive=false;
+  S.choiceActive=false;
+  document.getElementById('qte-area').classList.remove('active');
+  document.getElementById('choices-area').classList.remove('active');
+  document.getElementById('choices-area').innerHTML='';
+  document.getElementById('dialogue-text').textContent='';
+  clearTimeout(S.typewriterTimer);
+  // Mark all timeline events before t as triggered (skip them)
+  for(let i=0;i<TIMELINE.length;i++){
+    if(TIMELINE[i].t<t)S.triggered.add(i);
+    else S.triggered.delete(i);
+  }
+  // Update lastLyricIdx so lyrics don't jump
+  lastLyricIdx=-1;
+  for(let i=0;i<LYRICS.length;i++){
+    if(LYRICS[i].t<=t)lastLyricIdx=i;else break;
+  }
+  // Handle rhythm game state
+  if(t>=168.3&&!S.rhythmActive&&!S.endingDetermined){
+    startRhythm();
+  }else if(t<168.3&&S.rhythmActive){
+    // Seek back before rhythm game - stop it
+    S.rhythmActive=false;
+    S.notes.forEach(n=>{if(n.el)n.el.remove();});
+    S.notes=[];
+    switchScreen('day-screen');
+  }
+  // Clear rhythm notes if in rhythm game
+  if(S.rhythmActive){
+    S.notes.forEach(n=>{if(n.el)n.el.remove();});
+    S.notes=[];
+    S.nextBeat=0;
+    for(let i=0;i<BEATS.length;i++){
+      if(BEATS[i].t<=t)S.nextBeat=i+1;else break;
+    }
+  }
+  // Set audio time
+  audio.currentTime=t;
+  // Update UI immediately
+  updateSeekBar(t);
+}
+// Seek bar interaction
+(function(){
+  const bar=document.getElementById('seek-bar');
+  const track=document.getElementById('seek-track');
+  let dragging=false;
+  function getPct(e){
+    const rect=track.getBoundingClientRect();
+    const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+    return Math.max(0,Math.min(1,x/rect.width));
+  }
+  function startSeek(e){
+    if(!audio||S.endingDetermined)return;
+    e.stopPropagation();
+    e.preventDefault();
+    dragging=true;
+    const pct=getPct(e);
+    const t=pct*(audio.duration||238);
+    updateSeekBar(t);
+  }
+  function moveSeek(e){
+    if(!dragging)return;
+    e.stopPropagation();
+    e.preventDefault();
+    const pct=getPct(e);
+    const t=pct*(audio.duration||238);
+    updateSeekBar(t);
+  }
+  function endSeek(e){
+    if(!dragging)return;
+    dragging=false;
+    e.stopPropagation();
+    e.preventDefault();
+    const pct=getPct(e.changedTouches?{clientX:e.changedTouches[0].clientX}:{clientX:e.clientX});
+    const t=pct*(audio.duration||238);
+    seekToTime(t);
+  }
+  bar.addEventListener('mousedown',startSeek);
+  document.addEventListener('mousemove',moveSeek);
+  document.addEventListener('mouseup',endSeek);
+  bar.addEventListener('touchstart',startSeek,{passive:false});
+  document.addEventListener('touchmove',moveSeek,{passive:false});
+  document.addEventListener('touchend',endSeek,{passive:false});
+})();
+
+// ===================== INPUT =====================
+function handleInteraction(e){
+  // Ignore clicks on seek bar
+  if(e&&e.target){
+    let el=e.target;
+    while(el){
+      if(el.id==='seek-bar'||el.classList&&el.classList.contains('seek-bar'))return;
+      el=el.parentElement;
+    }
+  }
+  // Ignore clicks on choice buttons (they have their own handlers)
+  if(e&&e.target&&e.target.classList&&e.target.classList.contains('choice-btn'))return;
+  if(e)e.preventDefault();
+  if(S.qteActive){handleQTEClick();return;}
+  if(S.rhythmActive){handleRhythmHit();return;}
+}
+document.addEventListener('click',handleInteraction);
+document.addEventListener('touchstart',handleInteraction,{passive:false});
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(S.qteActive){handleQTEClick();}
+    else if(S.rhythmActive){handleRhythmHit();}
+  }
+});
+document.getElementById('start-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  startGame();
+});
+document.getElementById('restart-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  location.reload();
+});
+// Easter egg close button
+const eeCloseBtn=document.getElementById('easter-egg-close');
+if(eeCloseBtn){
+  eeCloseBtn.addEventListener('click',e=>{
+    e.stopPropagation();
+    PerfectClear.hideEasterEgg();
+  });
+}
+
+// ===================== INIT =====================
+window.addEventListener('load',()=>{
+  initAudio();
+  CheckIn.init();
+  // Also check QTE timeout in a separate interval
+  setInterval(()=>{
+    if(S.qteActive&&audio){checkQTETimeout(audio.currentTime);}
+  },100);
+  // Auto-resume audio if it pauses during gameplay (browser auto-play policy, tab switch, etc.)
+  setInterval(()=>{
+    if(audio&&S.screen!=='loading'&&S.screen!=='title'&&!S.endingDetermined){
+      if(audio.paused&&audio.currentTime>0){
+        console.log('[AUTO-RESUME] Audio paused during gameplay (t='+audio.currentTime+'), resuming...');
+        audio.play().catch(e=>console.warn('Resume failed:',e));
+      }
+    }
+  },500);
+  // SAFETY NET: Check ending trigger independently of game loop
+  // This ensures the ending ALWAYS triggers regardless of audio state
+  setInterval(()=>{
+    if(!audio||S.endingDetermined)return;
+    const t=audio.currentTime;
+    // 1. Audio reached ending trigger point (regardless of pause state)
+    if(t>=206){
+      console.log('[SAFETY-NET] Ending trigger at t='+t+', paused='+audio.paused);
+      showEnding();
+      return;
+    }
+    // 2. Rhythm game real-time timeout (rhythm should last ~38s from t=168 to t=206)
+    //    Use real time to handle audio stalling/pausing
+    if(S.rhythmActive&&_rhythmStartReal>0){
+      const realElapsed=(Date.now()-_rhythmStartReal)/1000;
+      if(realElapsed>=50){
+        console.warn('[SAFETY-NET] Rhythm game real-time timeout ('+realElapsed+'s elapsed), forcing ending. audio.t='+t+', paused='+audio.paused);
+        showEnding();
+        return;
+      }
+    }
+    // 3. Overall game real-time timeout (audio should be ~238s, game should end by ~215s)
+    if(_gameStartReal>0){
+      const totalElapsed=(Date.now()-_gameStartReal)/1000;
+      if(totalElapsed>=260){
+        console.warn('[SAFETY-NET] Total game timeout ('+totalElapsed+'s), forcing ending. audio.t='+t+', paused='+audio.paused);
+        showEnding();
+        return;
+      }
+    }
+    // 4. Audio ended without triggering ending
+    if(audio.ended){
+      console.log('[SAFETY-NET] Audio ended, forcing ending. t='+t);
+      showEnding();
+      return;
+    }
+  },500);
+});
+</script>
+</body>
+</html>
